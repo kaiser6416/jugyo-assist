@@ -903,56 +903,52 @@ function useRefPlan(title, url){
   toast('指導案を参考に設計モードで開きました');
 }
 
-async function dbSearch(){
+function dbSearch(){
   const q = document.getElementById('db-q').value.trim();
   if(!q){ toast('キーワードを入力してください'); return; }
   const s = document.getElementById('db-subj').value;
   const g = document.getElementById('db-grade').value;
   const sLabel = s ? SUBJ[s].label : '';
   const gLabel = g ? `中学${g}年` : '';
+  const searchQuery = `${q} ${sLabel} ${gLabel} 指導案 中学校`.trim();
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
 
-  document.getElementById('db-count').innerHTML = '<span style="color:var(--text2);">🔍 検索中...</span>';
-  document.getElementById('db-results').innerHTML = '';
+  // Google検索を新しいタブで開く
+  window.open(googleUrl, '_blank');
 
-  try {
-    const prompt = `中学校の授業指導案を5件提案してください。キーワード：「${q}」${sLabel}${gLabel}
+  // 下部にも検索リンクを表示
+  document.getElementById('db-count').innerHTML = `
+    「${q}」でGoogle検索しました。
+    <a href="${googleUrl}" target="_blank" style="color:var(--accent);font-weight:600;">
+      🔍 もう一度検索する
+    </a>
+  `;
+  document.getElementById('db-results').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;text-align:center;color:var(--text2);">
+      <div style="font-size:24px;margin-bottom:10px;">🔍</div>
+      <div style="font-size:13px;margin-bottom:14px;">Googleで「<strong>${searchQuery}</strong>」を検索しました。<br>見つかった指導案のURLをコピーしてお気に入りに登録できます。</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="window.open('${googleUrl}','_blank')">🔍 Google検索を開く</button>
+        <button class="btn" onclick="document.getElementById('fav-manual-area').style.display=''">⭐ URLを手動でお気に入り登録</button>
+      </div>
+      <div id="fav-manual-area" style="display:none;margin-top:14px;text-align:left;">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">Googleで見つけた指導案のURLとタイトルを入力してください</div>
+        <input type="text" id="fav-manual-title" placeholder="指導案のタイトル" style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;margin-bottom:6px;font-family:inherit;">
+        <input type="text" id="fav-manual-url" placeholder="https://..." style="width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;margin-bottom:8px;font-family:inherit;">
+        <button class="btn btn-accent" onclick="manualAddFavorite()">⭐ お気に入りに追加</button>
+      </div>
+    </div>
+  `;
+}
 
-必ずJSON配列のみ返答してください。説明文や前置きは一切不要です。
-
-[{"title":"タイトル","source":"出典機関名","url":"https://example.com","summary":"概要2文","type":"web"},{"title":"タイトル2","source":"出典2","url":"https://example2.com","summary":"概要2","type":"pdf"}]
-
-上記の形式で5件。urlは教育委員会や文部科学省など実在しそうなものにしてください。`;
-
-    const res = await callAI(prompt, 800);
-    let clean = res.replace(/```json|```/g,'').trim();
-    // JSON部分だけ抽出
-    const jsonMatch = clean.match(/\[[\s\S]*\]/);
-    if(!jsonMatch) throw new Error('JSONが見つかりません');
-    const results = JSON.parse(jsonMatch[0]);
-
-    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(q+' 指導案 中学校')}`;
-    document.getElementById('db-count').innerHTML = `「${q}」の検索結果 <strong>${results.length}件</strong>（AI提案）　<a href="${googleUrl}" target="_blank" style="font-size:11px;color:var(--accent);">🔍 Googleでも検索する</a>`;
-
-    document.getElementById('db-results').innerHTML = results.map(r => `
-      <div class="plan-card">
-        <div class="plan-card-top">
-          <div class="plan-card-title">${r.title||''}</div>
-          <div class="badges">
-            <span class="badge badge-gray">${r.source||''}</span>
-            ${r.type==='pdf'?'<span class="badge" style="background:#fee;color:#c00;">PDF</span>':''}
-          </div>
-        </div>
-        <div class="plan-card-body">${r.summary||''}</div>
-        <div class="card-actions">
-          <button class="btn btn-sm" onclick="openPlan('${(r.url||'').replace(/'/g,"\'")}','${(r.title||'').replace(/'/g,"\'")} 指導案')">👁 閲覧</button>
-          <button class="btn btn-sm" onclick="addFavorite('${(r.title||'').replace(/'/g,"\'")}','${(r.url||'').replace(/'/g,"\'")}')">⭐ お気に入り</button>
-          <button class="btn btn-sm btn-primary" onclick="useRefPlan('${(r.title||'').replace(/'/g,"\'")}','${(r.url||'').replace(/'/g,"\'")}')">✏️ これを参考に設計</button>
-        </div>
-      </div>`).join('');
-  } catch(e) {
-    document.getElementById('db-count').textContent = '検索に失敗しました。再試行してください。';
-    console.error(e);
-  }
+function manualAddFavorite(){
+  const title = document.getElementById('fav-manual-title').value.trim();
+  const url = document.getElementById('fav-manual-url').value.trim();
+  if(!title || !url){ toast('タイトルとURLを入力してください'); return; }
+  addFavorite(title, url);
+  document.getElementById('fav-manual-title').value = '';
+  document.getElementById('fav-manual-url').value = '';
+  document.getElementById('fav-manual-area').style.display = 'none';
 }
 
 // ============================================================
