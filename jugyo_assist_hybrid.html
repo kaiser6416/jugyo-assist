@@ -1545,13 +1545,9 @@ function copyCell(){
   const days = ['月','火','水','木','金'];
   const periods = ['1限','2限','3限','4限','5限','6限'];
   const dayStr = days.map((d,i)=>`${i}:${d}`).join(', ');
-  const msg = `複製先を選んでください。
-曜日(0=月〜4=金): `;
-  const di = parseInt(prompt('複製先の曜日を選んでください
-0=月, 1=火, 2=水, 3=木, 4=金'));
+  const di = parseInt(prompt('複製先の曜日を選んでください\n0=月, 1=火, 2=水, 3=木, 4=金'));
   if(isNaN(di) || di < 0 || di > 4){ toast('キャンセルしました'); return; }
-  const pi = parseInt(prompt('複製先の時限を選んでください
-0=1限, 1=2限, 2=3限, 3=4限, 4=5限, 5=6限'));
+  const pi = parseInt(prompt('複製先の時限を選んでください\n0=1限, 1=2限, 2=3限, 3=4限, 4=5限, 5=6限'));
   if(isNaN(pi) || pi < 0 || pi > 5){ toast('キャンセルしました'); return; }
   
   const destKey = `${currentWeekOffset}-${di}-${pi}`;
