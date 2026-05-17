@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>授業アシスト β — AI ハイブリッド対応版</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f7f6f2;
+  --surface:#ffffff;
+  --surface2:#f2f1ed;
+  --sidebar:#18181a;
+  --sidebar2:#222224;
+  --sidebar3:#2c2c2e;
+  --text:#18181a;
+  --text2:#6b6b6b;
+  --text3:#adadad;
+  --border:#e2e1dc;
+  --border2:#cccbc6;
+  --accent:#2a6b52;
+  --accent2:#e8f5ef;
+  --accent3:#9fe1cb;
+  --warn:#c8860a;
+  --warn2:#fff8ed;
+  --danger:#c0392b;
+  --radius:8px;
+  --radius2:12px;
+}
+body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px;}
+
+/* ========== LAYOUT ========== */
+.app{display:flex;height:100vh;}
+.sidebar{width:216px;background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ========== SIDEBAR ========== */
+.logo{padding:18px 14px 14px;border-bottom:1px solid var(--sidebar3);}
+.logo-name{font-size:16px;font-weight:700;color:#fff;letter-spacing:-0.3px;}
+.logo-name em{color:var(--accent3);font-style:normal;}
+.logo-badge{display:inline-block;font-size:9px;background:#2a6b52;color:#9fe1cb;padding:1px 6px;border-radius:99px;margin-left:6px;letter-spacing:0.5px;font-weight:600;}
+.logo-sub{font-size:10px;color:#555;margin-top:3px;}
+
+.nav-section{padding:10px 6px 2px;font-size:9px;color:#444;letter-spacing:1px;font-weight:700;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;color:#888;margin:1px 4px;transition:all 0.12s;user-select:none;}
+.nav-item:hover{background:var(--sidebar2);color:#ccc;}
+.nav-item.active{background:var(--sidebar3);color:#fff;font-weight:500;}
+.nav-item .ni{font-size:14px;width:16px;text-align:center;flex-shrink:0;}
+
+.ws-area{flex:1;overflow-y:auto;padding:4px;}
+.ws-area::-webkit-scrollbar{width:3px;}
+.ws-area::-webkit-scrollbar-thumb{background:#333;}
+.ws-file{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;cursor:pointer;margin:1px 0;transition:all 0.12s;}
+.ws-file:hover{background:var(--sidebar2);}
+.ws-file.active{background:#1a3028;}
+.ws-file-name{flex:1;font-size:11px;color:#777;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ws-file.active .ws-file-name{color:var(--accent3);}
+.ws-file-editing input{flex:1;background:#222;border:1px solid var(--accent);border-radius:4px;padding:2px 5px;font-size:11px;color:#fff;outline:none;}
+.subj-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-math{background:#5ba3e0;} .dot-jpn{background:#e05ba3;} .dot-sci{background:#5be0a3;} .dot-soc{background:#e0a35b;} .dot-eng{background:#a35be0;}
+
+.sidebar-bottom{padding:10px 6px;border-top:1px solid var(--sidebar3);}
+
+/* ========== TOPBAR ========== */
+.topbar{height:50px;background:var(--surface);border-bottom:1px solid var(--border);padding:0 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.topbar-title{font-size:14px;font-weight:600;}
+.topbar-sub{font-size:11px;color:var(--text2);}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+
+/* ========== BUTTONS ========== */
+.btn{padding:6px 11px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);font-size:11px;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.12s;font-family:inherit;white-space:nowrap;}
+.btn:hover{background:var(--surface2);border-color:var(--border2);}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:var(--sidebar);color:#fff;border-color:var(--sidebar);}
+.btn-primary:hover{background:#2c2c2e;border-color:#2c2c2e;}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-accent:hover{background:#1f5240;}
+.btn-sm{padding:4px 9px;font-size:10px;}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* ========== CONTENT ========== */
+.content{flex:1;overflow-y:auto;padding:18px 20px;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* ========== WEEK GRID ========== */
+.week-nav{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.week-label{font-size:13px;font-weight:600;flex:1;}
+
+.week-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;}
+.week-head{display:grid;grid-template-columns:44px repeat(5,1fr);border-bottom:1px solid var(--border);}
+.week-head-cell{padding:7px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--text2);background:var(--surface2);}
+.week-head-cell.today{color:var(--accent);background:var(--accent2);}
+
+.week-body{display:grid;grid-template-columns:44px repeat(5,1fr);}
+.period-label{display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);}
+.period-label:last-of-type{border-bottom:none;}
+
+.cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:72px;padding:4px;position:relative;}
+.cell:nth-child(6n){border-right:none;}
+.cell-inner{height:100%;min-height:64px;border-radius:5px;padding:5px 6px;cursor:pointer;transition:background 0.1s;position:relative;}
+.cell-inner:hover{background:var(--surface2);}
+.cell-inner.has-plan{background:var(--accent2);}
+.cell-inner.has-plan:hover{background:#d8f0e5;}
+.cell-inner.dragging-over{background:#c8e8d8;border:2px dashed var(--accent);}
+.cell-subj{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-block;margin-bottom:3px;}
+.cell-title{font-size:11px;color:var(--text);line-height:1.4;}
+.cell-link{font-size:9px;color:var(--accent);margin-top:3px;display:flex;align-items:center;gap:2px;cursor:pointer;}
+.cell-empty{height:100%;display:flex;align-items:center;justify-content:center;color:var(--border2);font-size:18px;cursor:pointer;}
+.cell-drag{cursor:grab;}
+.cell-drag:active{cursor:grabbing;opacity:0.7;}
+
+.subj-math{background:#deedf8;color:#185fa5;} .subj-jpn{background:#f8deed;color:#a5185f;} .subj-sci{background:#def8ee;color:#0f6e56;} .subj-soc{background:#f8f0de;color:#a5750f;} .subj-eng{background:#eeddf8;color:#6e0fa5;} .subj-moral{background:#f0efeb;color:#666;} .subj-sogo{background:#e8f0f8;color:#185fa5;} .subj-gakkatsu{background:#f8ede8;color:#a5400f;}
+
+/* ========== DB ========== */
+.search-row{display:flex;gap:8px;margin-bottom:12px;}
+.search-row input{flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+.search-row input:focus{border-color:var(--accent);}
+.search-row select{padding:7px 8px;border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+.db-count{font-size:11px;color:var(--text2);margin-bottom:10px;}
+.db-count strong{color:var(--text);}
+
+.plan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:12px 14px;margin-bottom:8px;transition:border-color 0.12s;}
+.plan-card:hover{border-color:var(--border2);}
+.plan-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;}
+.plan-card-title{font-size:13px;font-weight:600;}
+.badges{display:flex;gap:4px;flex-wrap:wrap;}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;}
+.badge-math{background:#deedf8;color:#185fa5;} .badge-jpn{background:#f8deed;color:#a5185f;} .badge-sci{background:#def8ee;color:#0f6e56;} .badge-soc{background:#f8f0de;color:#a5750f;} .badge-eng{background:#eeddf8;color:#6e0fa5;} .badge-gray{background:var(--surface2);color:var(--text2);}
+.plan-card-body{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:7px;}
+.tag-pills{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;}
+.tag-pill{font-size:10px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.card-actions{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* ========== DESIGN ========== */
+.mode-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;}
+.mode-tab{flex:1;padding:7px;font-size:11px;text-align:center;cursor:pointer;background:var(--surface);color:var(--text2);border:none;border-right:1px solid var(--border2);transition:all 0.12s;font-family:inherit;}
+.mode-tab:last-child{border-right:none;}
+.mode-tab.active{background:var(--sidebar);color:#fff;font-weight:600;}
+
+.form-row{margin-bottom:11px;}
+.form-label{font-size:10px;color:var(--text2);font-weight:700;display:block;margin-bottom:4px;letter-spacing:0.3px;text-transform:uppercase;}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;transition:border-color 0.12s;}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--accent);}
+.form-row textarea{resize:vertical;min-height:60px;line-height:1.6;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+.output-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;margin-top:14px;}
+.output-head{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.output-body{font-size:12px;color:var(--text);line-height:1.8;}
+.output-body h4{font-size:11px;font-weight:700;color:var(--accent);margin:10px 0 4px;letter-spacing:0.3px;}
+.output-footer{display:flex;gap:7px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+
+/* ========== RUBRIC ========== */
+.rubric-table{width:100%;border-collapse:collapse;font-size:11px;background:var(--surface);border-radius:var(--radius2);overflow:hidden;border:1px solid var(--border);}
+.rubric-table th{padding:8px 10px;background:var(--surface2);text-align:left;font-weight:700;font-size:10px;color:var(--text2);border-bottom:1px solid var(--border);border-right:1px solid var(--border);letter-spacing:0.3px;}
+.rubric-table td{padding:9px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:top;line-height:1.6;color:var(--text);}
+.rubric-table tr:last-child td{border-bottom:none;}
+.grade-a{color:#0f6e56;font-weight:700;font-size:10px;} .grade-b{color:#185fa5;font-weight:700;font-size:10px;} .grade-c{color:var(--text2);font-weight:700;font-size:10px;}
+.obs-note{font-size:10px;color:var(--text3);display:block;margin-top:2px;}
+
+/* ========== TEST ========== */
+.step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;margin-bottom:10px;}
+.step-head{font-size:10px;font-weight:700;color:var(--text2);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:10px;}
+
+.file-list{border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;}
+.file-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid var(--border);}
+.file-item:last-child{border-bottom:none;}
+.file-item:hover{background:var(--surface2);}
+.file-item.selected{background:var(--accent2);}
+.file-item input[type=radio]{accent-color:var(--accent);}
+.file-info{flex:1;}
+.file-name-text{font-size:12px;font-weight:500;}
+.file-meta{font-size:10px;color:var(--text2);}
+
+.obs-row{display:flex;gap:8px;flex-wrap:wrap;}
+.obs-btn{padding:6px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;cursor:pointer;background:var(--surface);color:var(--text2);transition:all 0.12s;}
+.obs-btn:hover{border-color:var(--accent);}
+.obs-btn.selected{border-color:var(--accent);background:var(--accent2);color:var(--accent);font-weight:600;}
+
+.qtype-row{display:flex;gap:8px;}
+.qtype-btn{flex:1;padding:8px;border:1px solid var(--border2);border-radius:var(--radius);font-size:11px;text-align:center;cursor:pointer;background:var(--surface);color:var(--text2);transition:all 0.12s;}
+.qtype-btn:hover{border-color:var(--accent);}
+.qtype-btn.active{border-color:var(--sidebar);background:var(--sidebar);color:#fff;font-weight:600;}
+
+.notice{background:var(--warn2);border:1px solid #e8c86a;border-radius:var(--radius);padding:9px 12px;font-size:11px;color:#7a5800;line-height:1.7;margin-bottom:12px;}
+.q-block{border:1px solid var(--border);border-radius:var(--radius);padding:11px 13px;margin-bottom:8px;}
+.q-label{font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.5px;margin-bottom:4px;}
+.q-obs-tag{display:inline-block;font-size:10px;padding:1px 8px;border-radius:99px;background:#deedf8;color:#185fa5;margin-bottom:6px;}
+.q-obs-tag.ai-rec{background:var(--accent2);color:var(--accent);}
+.q-text{font-size:12px;color:var(--text);line-height:1.8;white-space:pre-line;}
+.q-sub{padding-left:14px;color:var(--text2);}
+
+/* ========== MEMO ========== */
+.memo-layout{display:grid;grid-template-columns:200px 1fr;gap:12px;height:calc(100vh - 90px);}
+.memo-list-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);display:flex;flex-direction:column;overflow:hidden;}
+.memo-list-head{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.memo-list-title{font-size:12px;font-weight:600;}
+.memo-items{flex:1;overflow-y:auto;}
+.memo-item{padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;}
+.memo-item:hover{background:var(--surface2);}
+.memo-item.active{background:var(--accent2);}
+.memo-item-title{font-size:11px;font-weight:500;margin-bottom:2px;}
+.memo-item-preview{font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.memo-item-date{font-size:9px;color:var(--text3);margin-top:2px;}
+.memo-editor-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);display:flex;flex-direction:column;overflow:hidden;}
+.memo-editor-head{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.memo-title-input{flex:1;border:none;font-size:14px;font-weight:600;font-family:inherit;color:var(--text);outline:none;background:transparent;}
+.memo-body-input{flex:1;padding:16px;border:none;resize:none;font-size:12px;font-family:inherit;color:var(--text);line-height:1.9;outline:none;background:transparent;}
+
+/* ========== SETTINGS ========== */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius2);padding:18px 20px;margin-bottom:12px;}
+.settings-title{font-size:13px;font-weight:600;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.api-input-row{display:flex;gap:8px;}
+.api-input-row input{flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;}
+.api-input-row input:focus{border-color:var(--accent);}
+.api-status{font-size:11px;margin-top:8px;display:flex;align-items:center;gap:5px;}
+.api-status.ok{color:var(--accent);}
+.api-status.ng{color:var(--danger);}
+.settings-note{font-size:11px;color:var(--text2);line-height:1.7;margin-top:8px;}
+.settings-note a{color:var(--accent);}
+
+
+/* ========== AI SELECTOR ========== */
+.ai-selector{display:flex;flex-direction:column;gap:8px;}
+.ai-option{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1.5px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all 0.15s;}
+.ai-option:hover{border-color:var(--accent);background:var(--accent2);}
+.ai-option.active{border-color:var(--accent);background:var(--accent2);}
+.ai-opt-icon{font-size:18px;flex-shrink:0;}
+.ai-opt-info{flex:1;}
+.ai-opt-name{font-size:12px;font-weight:600;margin-bottom:2px;}
+.ai-opt-desc{font-size:10px;color:var(--text2);}
+.ai-opt-check{font-size:13px;color:var(--accent);font-weight:700;width:16px;text-align:center;}
+.ai-rec-badge{display:inline-block;font-size:9px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:99px;margin-left:6px;font-weight:600;vertical-align:middle;}
+.ai-indicator{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:3px 10px;cursor:pointer;transition:all 0.12s;}
+.ai-indicator:hover{border-color:var(--accent);color:var(--accent);}
+/* ========== LOADING ========== */
+.loading{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);}
+.spin{width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ========== MODAL ========== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal{background:var(--surface);border-radius:var(--radius2);padding:20px 22px;width:440px;max-width:90vw;}
+.modal-title{font-size:14px;font-weight:600;margin-bottom:14px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* ========== TOAST ========== */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--sidebar);color:#fff;padding:10px 16px;border-radius:var(--radius);font-size:12px;opacity:0;transition:opacity 0.2s;z-index:200;pointer-events:none;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="app">
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-name">授業<em>アシスト</em><span class="logo-badge">β</span></div>
+    <div class="logo-sub">授業設計プラットフォーム</div>
+  </div>
+
+  <div class="nav-section">メニュー</div>
+  <div class="nav-item active" onclick="nav('weekly')" id="nav-weekly"><span class="ni">📅</span>週案簿</div>
+  <div class="nav-item" onclick="nav('database')" id="nav-database"><span class="ni">🗃</span>指導案 DB</div>
+  <div class="nav-item" onclick="nav('design')" id="nav-design"><span class="ni">✏️</span>授業設計</div>
+  <div class="nav-item" onclick="nav('rubric')" id="nav-rubric"><span class="ni">📊</span>評価・ルーブリック</div>
+  <div class="nav-item" onclick="nav('test')" id="nav-test"><span class="ni">📝</span>テスト素案</div>
+  <div class="nav-item" onclick="nav('memo')" id="nav-memo"><span class="ni">🗒</span>メモパッド</div>
+
+  <div class="nav-section" style="margin-top:4px;">ワークスペース</div>
+  <div class="ws-area" id="ws-area">
+    <div style="font-size:10px;color:#444;padding:4px 8px;">保存された授業計画がここに表示されます</div>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="nav-item" onclick="nav('settings')" id="nav-settings"><span class="ni">⚙️</span>設定 / API キー</div>
+    <div class="nav-item" onclick="openFeedback()" style="margin-top:2px;"><span class="ni">💬</span>フィードバック</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="topbar-title">週案簿</div>
+      <div class="topbar-sub" id="topbar-sub"></div>
+    </div>
+    <div id="ai-indicator" class="ai-indicator" onclick="nav('settings')">🔵 Gemini Flash で生成</div><div class="topbar-right" id="topbar-actions"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== 週案簿 ===== -->
+    <div class="panel active" id="panel-weekly">
+      <div class="week-nav">
+        <button class="btn btn-sm" onclick="changeWeek(-1)">◀ 前週</button>
+        <div class="week-label" id="week-label"></div>
+        <button class="btn btn-sm" onclick="changeWeek(1)">次週 ▶</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddCell()">＋ 授業を追加</button>
+      </div>
+      <div class="week-wrap">
+        <div class="week-head" id="week-head"></div>
+        <div class="week-body" id="week-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== 指導案 DB ===== -->
+    <div class="panel" id="panel-database">
+      <div class="search-row">
+        <input type="text" id="db-q" placeholder="単元名・キーワードで検索..." />
+        <select id="db-subj">
+          <option value="">全教科</option>
+          <option value="math">数学</option>
+          <option value="jpn">国語</option>
+          <option value="sci">理科</option>
+          <option value="soc">社会</option>
+          <option value="eng">英語</option>
+        </select>
+        <select id="db-grade">
+          <option value="">全学年</option>
+          <option value="1">1年</option>
+          <option value="2">2年</option>
+          <option value="3">3年</option>
+        </select>
+        <button class="btn btn-primary" onclick="dbSearch()">🔍 検索</button>
+      </div>
+      <div class="db-count" id="db-count"></div>
+      <div id="db-results"></div>
+    </div>
+
+    <!-- ===== 授業設計 ===== -->
+    <div class="panel" id="panel-design">
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setMode(this,'manual')">✏️ 手動で作成</button>
+        <button class="mode-tab" onclick="setMode(this,'ai')">🤖 AI に丸投げ</button>
+        <button class="mode-tab" onclick="setMode(this,'hybrid')">📄 指導案を参考に設計</button>
+      </div>
+      <div class="grid3">
+        <div class="form-row">
+          <label class="form-label">教科</label>
+          <select id="d-subj"><option value="math">数学</option><option value="jpn">国語</option><option value="sci">理科</option><option value="soc">社会</option><option value="eng">英語</option></select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">学年</label>
+          <select id="d-grade"><option>1年</option><option>2年</option><option>3年</option></select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">時数</label>
+          <select id="d-jisuu"><option>1時間</option><option>2時間</option><option>3時間</option><option>4時間</option><option>5時間</option><option>6時間</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label class="form-label">単元名</label><input type="text" id="d-unit" placeholder="例：一次方程式の解き方" /></div>
+      <div class="form-row"><label class="form-label">本時のねらい</label><textarea id="d-aim" placeholder="この授業で生徒に学んでほしいこと..."></textarea></div>
+      <div class="form-row"><label class="form-label">主な発問（任意）</label><textarea id="d-question" placeholder="例：「植物はどこでエネルギーを作っているのか？」"></textarea></div>
+      <div class="form-row"><label class="form-label">自校の特性・AI への要望</label><textarea id="d-request" placeholder="例：少人数18名。探究型でペア活動を取り入れてほしい。支援級の生徒が2名います。"></textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="generatePlan()" id="btn-gen-plan">🤖 授業計画を生成</button>
+        <button class="btn" onclick="savePlan()" id="btn-save-plan">💾 ワークスペースに保存</button>
+      </div>
+      <div id="design-output"></div>
+    </div>
+
+    <!-- ===== 評価・ルーブリック ===== -->
+    <div class="panel" id="panel-rubric">
+      <div class="grid2" style="margin-bottom:12px;">
+        <div class="form-row"><label class="form-label">単元名</label><input type="text" id="r-unit" placeholder="例：植物の細胞と光合成" /></div>
+        <div class="form-row"><label class="form-label">評価場面</label>
+          <select id="r-scene"><option>ペーパーテスト</option><option>パフォーマンス課題</option><option>発表・プレゼン</option><option>観察・実験</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label class="form-label">教科</label>
+        <select id="r-subj"><option value="math">数学</option><option value="jpn">国語</option><option value="sci">理科</option><option value="soc">社会</option><option value="eng">英語</option></select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="btn btn-accent" onclick="generateRubric(false)" id="btn-rubric">🤖 ルーブリックを生成</button>
+        <button class="btn" onclick="generateRubric(true)">♿ 支援級対応版</button>
+      </div>
+      <div id="rubric-output"></div>
+    </div>
+
+    <!-- ===== テスト素案 ===== -->
+    <div class="panel" id="panel-test">
+      <div class="step-card">
+        <div class="step-head">STEP 1 — ワークスペースから授業計画を選択</div>
+        <div class="file-list" id="test-file-list"><div style="padding:12px;font-size:11px;color:var(--text2);">授業設計からワークスペースに保存した計画がここに表示されます。</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-head">STEP 2 — 観点を選択（未選択で AI がおすすめを判定）</div>
+        <div class="obs-row">
+          <div class="obs-btn" id="obs-a" onclick="toggleObs('obs-a')">知識・技能</div>
+          <div class="obs-btn" id="obs-b" onclick="toggleObs('obs-b')">思考・判断・表現</div>
+          <div class="obs-btn" id="obs-c" onclick="toggleObs('obs-c')">主体的に学習に取り組む態度</div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-head">STEP 3 — 問題形式を選択</div>
+        <div class="qtype-row">
+          <div class="qtype-btn active" onclick="setQtype(this,'大問')">大問（系統別 3 パターン）</div>
+          <div class="qtype-btn" onclick="setQtype(this,'小問2')">小問 2 問（命題→(1)(2)を 3 パターン）</div>
+          <div class="qtype-btn" onclick="setQtype(this,'小問3')">小問 3 問（命題→(1)(2)(3)を 3 パターン）</div>
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="generateTest()" id="btn-test">🤖 素案を生成</button>
+      <div id="test-output"></div>
+    </div>
+
+    <!-- ===== メモパッド ===== -->
+    <div class="panel" id="panel-memo">
+      <div class="memo-layout">
+        <div class="memo-list-panel">
+          <div class="memo-list-head">
+            <span class="memo-list-title">メモ</span>
+            <button class="btn btn-sm btn-primary" onclick="newMemo()">＋ 新規</button>
+          </div>
+          <div class="memo-items" id="memo-items"></div>
+        </div>
+        <div class="memo-editor-panel">
+          <div class="memo-editor-head">
+            <input class="memo-title-input" id="memo-title" placeholder="タイトルを入力..." oninput="saveMemo()" />
+            <button class="btn btn-sm" onclick="deleteMemo()">🗑</button>
+          </div>
+          <textarea class="memo-body-input" id="memo-body" placeholder="ここに内容を入力...&#10;&#10;授業での気づき、保護者対応メモ、雑記など何でも。" oninput="saveMemo()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 設定 ===== -->
+    <div class="panel" id="panel-settings">
+      <div class="settings-card">
+        <div class="settings-title">🤖 使用する AI を選択</div>
+        <div class="ai-selector">
+          <div class="ai-option active" id="ai-opt-gemini" onclick="selectAI('gemini')">
+            <div class="ai-opt-icon">🔵</div>
+            <div class="ai-opt-info">
+              <div class="ai-opt-name">Gemini Flash <span class="ai-rec-badge">おすすめ</span></div>
+              <div class="ai-opt-desc">Google製・無料枠あり・Googleアカウントで取得可能・クレカ不要</div>
+            </div>
+            <div class="ai-opt-check" id="check-gemini">✓</div>
+          </div>
+          <div class="ai-option" id="ai-opt-gpt" onclick="selectAI('gpt')">
+            <div class="ai-opt-icon">🟢</div>
+            <div class="ai-opt-info">
+              <div class="ai-opt-name">GPT-4o mini</div>
+              <div class="ai-opt-desc">OpenAI製・知名度高・安価で高品質</div>
+            </div>
+            <div class="ai-opt-check" id="check-gpt"></div>
+          </div>
+          <div class="ai-option" id="ai-opt-claude" onclick="selectAI('claude')">
+            <div class="ai-opt-icon">🟠</div>
+            <div class="ai-opt-info">
+              <div class="ai-opt-name">Claude Sonnet</div>
+              <div class="ai-opt-desc">Anthropic製・日本語精度最高</div>
+            </div>
+            <div class="ai-opt-check" id="check-claude"></div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-card" id="key-card-gemini">
+        <div class="settings-title">🔑 Gemini API キー <span class="ai-rec-badge">無料枠あり</span></div>
+        <div class="api-input-row">
+          <input type="password" id="key-gemini" placeholder="AIza..." />
+          <button class="btn btn-primary" onclick="saveKey('gemini')">保存</button>
+          <button class="btn" onclick="testKey('gemini')">接続テスト</button>
+        </div>
+        <div class="api-status" id="status-gemini"></div>
+        <div class="settings-note">
+          取得方法：<a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> を開く →「APIキーを作成」→ コピーして上に貼り付け<br>
+          <strong>Googleアカウントだけで取得可能・クレジットカード不要・無料枠あり</strong>
+        </div>
+      </div>
+      <div class="settings-card" id="key-card-gpt" style="display:none;">
+        <div class="settings-title">🔑 OpenAI API キー</div>
+        <div class="api-input-row">
+          <input type="password" id="key-gpt" placeholder="sk-proj-..." />
+          <button class="btn btn-primary" onclick="saveKey('gpt')">保存</button>
+          <button class="btn" onclick="testKey('gpt')">接続テスト</button>
+        </div>
+        <div class="api-status" id="status-gpt"></div>
+        <div class="settings-note">
+          取得方法：<a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a> を開く →「Create new secret key」→ コピーして貼り付け<br>
+          ※クレジットカード登録と初回チャージ（$5〜）が必要です。
+        </div>
+      </div>
+      <div class="settings-card" id="key-card-claude" style="display:none;">
+        <div class="settings-title">🔑 Anthropic API キー</div>
+        <div class="api-input-row">
+          <input type="password" id="key-claude" placeholder="sk-ant-..." />
+          <button class="btn btn-primary" onclick="saveKey('claude')">保存</button>
+          <button class="btn" onclick="testKey('claude')">接続テスト</button>
+        </div>
+        <div class="api-status" id="status-claude"></div>
+        <div class="settings-note">
+          取得方法：<a href="https://console.anthropic.com" target="_blank">Anthropic Console</a> を開く →「Get API Keys」→「Create Key」→ コピーして貼り付け<br>
+          ※クレジットカード登録が必要です。初回$5の無料クレジットあり。
+        </div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">🗂 データ管理</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="exportData()">📤 エクスポート（JSON）</button>
+          <button class="btn" onclick="importData()">📥 インポート</button>
+          <button class="btn" style="color:var(--danger);border-color:var(--danger);" onclick="clearData()">🗑 全データを削除</button>
+        </div>
+        <div class="settings-note" style="margin-top:8px;">データはブラウザ内のみに保存されます。端末外には送信されません（AI生成時のプロンプト除く）。</div>
+      </div>
+      <div class="settings-card">
+        <div class="settings-title">ℹ️ 授業アシスト β について</div>
+        <div class="settings-note">
+          バージョン: 0.2.0-beta（AI ハイブリッド対応版）<br>
+          データ保存: ブラウザ内 localStorage（端末外に出ません）<br>
+          対応 AI: Gemini Flash / GPT-4o mini / Claude Sonnet<br>
+          対応教科: 国語・数学・理科・社会・英語（実技教科は今後対応予定）<br><br>
+          本ソフトウェアはベータ版です。フィードバックをお待ちしています。
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL: セル追加 -->
+<div class="modal-bg" id="modal-cell" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">授業を追加・編集</div>
+    <div class="grid2">
+      <div class="form-row"><label class="form-label">曜日</label>
+        <select id="mc-day"><option>月</option><option>火</option><option>水</option><option>木</option><option>金</option></select>
+      </div>
+      <div class="form-row"><label class="form-label">時限</label>
+        <select id="mc-period"><option>1限</option><option>2限</option><option>3限</option><option>4限</option><option>5限</option><option>6限</option></select>
+      </div>
+    </div>
+    <div class="form-row"><label class="form-label">教科</label>
+      <select id="mc-subj"><option value="math">数学</option><option value="jpn">国語</option><option value="sci">理科</option><option value="soc">社会</option><option value="eng">英語</option><option value="moral">道徳</option><option value="sogo">総合</option><option value="gakkatsu">学活</option></select>
+    </div>
+    <div class="form-row"><label class="form-label">授業タイトル</label><input type="text" id="mc-title" placeholder="例：一次方程式の解き方" /></div>
+    <div class="form-row"><label class="form-label">授業計画リンク（任意）</label><input type="text" id="mc-link" placeholder="https://docs.google.com/..." /></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-cell')">キャンセル</button>
+      <button class="btn" id="mc-del" onclick="deleteCell()" style="color:var(--danger);">削除</button>
+      <button class="btn btn-primary" onclick="saveCell()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ファイル名変更 -->
+<div class="modal-bg" id="modal-rename" style="display:none;">
+  <div class="modal">
+    <div class="modal-title">授業計画の名前を変更</div>
+    <div class="form-row"><input type="text" id="rename-input" placeholder="名前を入力..." /></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-rename')">キャンセル</button>
+      <button class="btn btn-primary" onclick="doRename()">変更</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="import-file" accept=".json" style="display:none;" onchange="handleImport(event)" />
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const SUBJ = {
+  math:{label:'数学',cls:'subj-math',dot:'dot-math',badge:'badge-math'},
+  jpn:{label:'国語',cls:'subj-jpn',dot:'dot-jpn',badge:'badge-jpn'},
+  sci:{label:'理科',cls:'subj-sci',dot:'dot-sci',badge:'badge-sci'},
+  soc:{label:'社会',cls:'subj-soc',dot:'dot-soc',badge:'badge-soc'},
+  eng:{label:'英語',cls:'subj-eng',dot:'dot-eng',badge:'badge-eng'},
+  moral:{label:'道徳',cls:'subj-moral',dot:'',badge:'badge-gray'},
+  sogo:{label:'総合',cls:'subj-sogo',dot:'',badge:'badge-gray'},
+  gakkatsu:{label:'学活',cls:'subj-gakkatsu',dot:'',badge:'badge-gray'},
+};
+const PERIODS = ['1限','2限','3限','4限','5限','6限'];
+const DAYS = ['月','火','水','木','金'];
+
+let currentWeekOffset = 0;
+let weekData = {}; // key: "di-pi" -> {subj, title, link}
+let wsFiles = []; // {id, name, subj, grade, unit, content}
+let wsCounter = 0;
+let selectedWsFile = null;
+let currentObs = new Set();
+let currentQtype = '大問';
+let memos = []; // {id, title, body, date}
+let currentMemoId = null;
+let renameTarget = null;
+let editingCell = null; // {di, pi}
+let currentPlan = null; // generated plan text
+let dragSrc = null;
+
+// ============================================================
+// PERSISTENCE
+// ============================================================
+function save(key, val){ try{ localStorage.setItem('jaa_'+key, JSON.stringify(val)); }catch(e){} }
+function load(key, def){ try{ const v=localStorage.getItem('jaa_'+key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+
+function loadAll(){
+  weekData = load('weekData', {});
+  wsFiles = load('wsFiles', []);
+  wsCounter = load('wsCounter', 0);
+  memos = load('memos', []);
+  const apiKey = load('apiKey', '');
+  if(apiKey) document.getElementById('api-key-input').value = apiKey;
+  renderWs();
+  renderMemoList();
+  buildTestFileList();
+}
+
+function saveAll(){
+  save('weekData', weekData);
+  save('wsFiles', wsFiles);
+  save('wsCounter', wsCounter);
+  save('memos', memos);
+}
+
+// ============================================================
+// NAV
+// ============================================================
+const PANEL_META = {
+  weekly:{title:'週案簿',sub:''},
+  database:{title:'指導案データベース',sub:''},
+  design:{title:'授業設計エディタ',sub:''},
+  rubric:{title:'評価・ルーブリック生成',sub:''},
+  test:{title:'テスト素案作成',sub:'指導と評価の一体化'},
+  memo:{title:'メモパッド',sub:''},
+  settings:{title:'設定',sub:''},
+};
+const PANEL_ACTIONS = {
+  weekly: `<button class="btn btn-sm" onclick="exportWeek()">📤 PDF用印刷</button>`,
+  design: `<button class="btn btn-sm" onclick="savePlan()">💾 ワークスペースに保存</button>`,
+  default: '',
+};
+
+function nav(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  const navEl = document.getElementById('nav-'+id);
+  if(navEl) navEl.classList.add('active');
+  document.getElementById('topbar-title').textContent = PANEL_META[id].title;
+  document.getElementById('topbar-sub').textContent = PANEL_META[id].sub || '';
+  document.getElementById('topbar-actions').innerHTML = PANEL_ACTIONS[id] || PANEL_ACTIONS.default || '';
+  if(id==='weekly') renderWeek();
+  if(id==='test') buildTestFileList();
+}
+
+// ============================================================
+// WEEK
+// ============================================================
+function getWeekStart(offset){
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day===0?-6:1);
+  d.setDate(diff + offset*7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function renderWeek(){
+  const start = getWeekStart(currentWeekOffset);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+  const end = new Date(start); end.setDate(start.getDate()+4);
+  document.getElementById('week-label').textContent = `${start.getFullYear()}年${start.getMonth()+1}月${fmt(start)}（月）〜 ${fmt(end)}（金）`;
+
+  // head
+  const head = document.getElementById('week-head');
+  head.innerHTML = '<div class="week-head-cell"></div>';
+  for(let di=0;di<5;di++){
+    const d = new Date(start); d.setDate(start.getDate()+di);
+    const isToday = d.getTime()===today.getTime();
+    head.innerHTML += `<div class="week-head-cell${isToday?' today':''}">${DAYS[di]} ${fmt(d)}</div>`;
+  }
+
+  // body
+  const body = document.getElementById('week-body');
+  body.innerHTML = '';
+  for(let pi=0;pi<6;pi++){
+    body.innerHTML += `<div class="period-label">${PERIODS[pi]}</div>`;
+    for(let di=0;di<5;di++){
+      const key = `${currentWeekOffset}-${di}-${pi}`;
+      const cell = weekData[key];
+      let cellHtml = '';
+      if(cell && cell.subj){
+        const s = SUBJ[cell.subj]||SUBJ.moral;
+        cellHtml = `<div class="cell-inner has-plan cell-drag" draggable="true"
+          ondragstart="dragStart(event,'${key}')"
+          ondragover="dragOver(event)"
+          ondrop="dropCell(event,'${currentWeekOffset}-${di}-${pi}')"
+          ondragleave="dragLeave(event)">
+          <span class="cell-subj ${s.cls}">${s.label}</span>
+          <div class="cell-title">${cell.title||''}</div>
+          ${cell.link?`<div class="cell-link" onclick="openLink('${cell.link}')">🔗 指導案を見る</div>`:''}
+          <div style="position:absolute;top:4px;right:4px;font-size:10px;color:var(--text3);cursor:pointer;" onclick="openEditCell(${di},${pi})">✎</div>
+        </div>`;
+      } else {
+        cellHtml = `<div class="cell-inner"
+          ondragover="dragOver(event)"
+          ondrop="dropCell(event,'${currentWeekOffset}-${di}-${pi}')"
+          ondragleave="dragLeave(event)"
+          onclick="openAddCellAt(${di},${pi})">
+          <div class="cell-empty">＋</div>
+        </div>`;
+      }
+      body.innerHTML += `<div class="cell">${cellHtml}</div>`;
+    }
+  }
+}
+
+function changeWeek(d){ currentWeekOffset+=d; renderWeek(); }
+
+// drag & drop
+function dragStart(e, key){ dragSrc=key; e.dataTransfer.effectAllowed='move'; }
+function dragOver(e){ e.preventDefault(); e.currentTarget.classList.add('dragging-over'); }
+function dragLeave(e){ e.currentTarget.classList.remove('dragging-over'); }
+function dropCell(e, destKey){
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragging-over');
+  if(!dragSrc || dragSrc===destKey) return;
+  const src = weekData[dragSrc];
+  const dest = weekData[destKey];
+  if(src) weekData[destKey]=src; else delete weekData[destKey];
+  if(dest) weekData[dragSrc]=dest; else delete weekData[dragSrc];
+  dragSrc=null;
+  saveAll();
+  renderWeek();
+}
+
+function openAddCell(){ openAddCellAt(0,0); }
+function openAddCellAt(di,pi){
+  editingCell={di,pi};
+  document.getElementById('mc-day').value=DAYS[di];
+  document.getElementById('mc-period').selectedIndex=pi;
+  document.getElementById('mc-title').value='';
+  document.getElementById('mc-link').value='';
+  document.getElementById('mc-subj').value='math';
+  document.getElementById('mc-del').style.display='none';
+  document.getElementById('modal-cell').style.display='flex';
+}
+function openEditCell(di,pi){
+  const key=`${currentWeekOffset}-${di}-${pi}`;
+  const cell=weekData[key]||{};
+  editingCell={di,pi};
+  document.getElementById('mc-day').selectedIndex=di;
+  document.getElementById('mc-period').selectedIndex=pi;
+  document.getElementById('mc-subj').value=cell.subj||'math';
+  document.getElementById('mc-title').value=cell.title||'';
+  document.getElementById('mc-link').value=cell.link||'';
+  document.getElementById('mc-del').style.display='';
+  document.getElementById('modal-cell').style.display='flex';
+}
+function saveCell(){
+  const di=editingCell.di, pi=editingCell.pi;
+  const key=`${currentWeekOffset}-${di}-${pi}`;
+  const subj=document.getElementById('mc-subj').value;
+  const title=document.getElementById('mc-title').value.trim();
+  const link=document.getElementById('mc-link').value.trim();
+  if(!title){ toast('タイトルを入力してください'); return; }
+  weekData[key]={subj,title,link};
+  saveAll(); closeModal('modal-cell'); renderWeek();
+}
+function deleteCell(){
+  if(!editingCell) return;
+  const key=`${currentWeekOffset}-${editingCell.di}-${editingCell.pi}`;
+  delete weekData[key];
+  saveAll(); closeModal('modal-cell'); renderWeek();
+}
+function openLink(url){ window.open(url,'_blank'); }
+function exportWeek(){ window.print(); }
+
+// ============================================================
+// DB (static sample data)
+// ============================================================
+const DB_SAMPLE = [
+  {subj:'math',grade:'1',title:'一次方程式の解き方 — 移項の考え方',body:'等式の性質から移項を導く。天秤の比喩で視覚的に理解させる発問中心の展開。',tags:['移項','等式の性質','発問']},
+  {subj:'math',grade:'2',title:'連立方程式 — 加減法と代入法の比較',body:'2つの解法を比較し、問題の特徴に応じて使い分けを判断させる。',tags:['連立方程式','加減法','代入法']},
+  {subj:'jpn',grade:'1',title:'竹取物語 — 音読と古語の解釈',body:'音読を通じて古文のリズムをつかみ、現代語との比較で古語の意味を理解する。',tags:['古文','竹取物語','音読']},
+  {subj:'jpn',grade:'2',title:'説明文の構成 — 要旨をとらえる',body:'段落相互の関係を整理し、筆者の主張を論理的に把握する授業展開。',tags:['説明文','要旨','論理的思考']},
+  {subj:'sci',grade:'1',title:'植物の光合成 — BTB溶液実験',body:'BTB溶液の色変化から光合成を実証する探究型の展開。仮説設定→実験→考察。',tags:['光合成','BTB溶液','探究','仮説検証']},
+  {subj:'sci',grade:'2',title:'電流と磁界 — コイルと磁石の実験',body:'コイルに磁石を近づけたときの電流変化を観察し、電磁誘導の概念を帰納的に導く。',tags:['電磁誘導','コイル','実験']},
+  {subj:'soc',grade:'1',title:'鎌倉幕府の仕組み — 封建制度の理解',body:'御恩と奉公の関係図を作成しながら、封建的主従関係の本質を理解する。',tags:['鎌倉幕府','封建制度','御恩と奉公']},
+  {subj:'soc',grade:'3',title:'近代日本の国際関係 — 条約改正への道',body:'不平等条約改正の経緯をタイムラインで整理し、当時の外交的課題を考察する。',tags:['条約改正','明治','外交']},
+  {subj:'eng',grade:'1',title:'Unit3 Reading — 段落読解と要点把握',body:'段落ごとのトピックセンテンスを特定し、全体の論理展開を把握するリーディング指導。',tags:['Reading','段落読解','トピックセンテンス']},
+  {subj:'eng',grade:'2',title:'比較表現 — as...as / 比較級 / 最上級',body:'3種の比較表現を文脈の中で使い分ける練習。ペアワークで産出活動まで行う。',tags:['比較表現','比較級','最上級']},
+];
+
+function dbSearch(){
+  const q=document.getElementById('db-q').value.trim().toLowerCase();
+  const s=document.getElementById('db-subj').value;
+  const g=document.getElementById('db-grade').value;
+  let results=DB_SAMPLE.filter(p=>{
+    if(s && p.subj!==s) return false;
+    if(g && p.grade!==g) return false;
+    if(q && !p.title.toLowerCase().includes(q) && !p.tags.some(t=>t.includes(q))) return false;
+    return true;
+  });
+  const sLabel=s?SUBJ[s].label:'全教科';
+  const gLabel=g?g+'年':'全学年';
+  document.getElementById('db-count').innerHTML=`検索結果 <strong>${results.length}件</strong>${q?`（「${q}」）`:''} / ${sLabel}・${gLabel}`;
+  document.getElementById('db-results').innerHTML=results.map(p=>`
+    <div class="plan-card">
+      <div class="plan-card-top">
+        <div class="plan-card-title">${p.title}</div>
+        <div class="badges"><span class="badge ${SUBJ[p.subj].badge}">${SUBJ[p.subj].label}</span><span class="badge badge-gray">${p.grade}年</span></div>
+      </div>
+      <div class="plan-card-body">${p.body}</div>
+      <div class="tag-pills">${p.tags.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div>
+      <div class="card-actions">
+        <button class="btn btn-sm">👁 閲覧</button>
+        <button class="btn btn-sm">⭐ お気に入り</button>
+        <button class="btn btn-sm btn-primary" onclick="useDbPlan('${p.subj}','${p.grade}','${p.title.replace(/'/g,"\\'")}')">✏️ これを参考に設計</button>
+      </div>
+    </div>`).join('');
+}
+function useDbPlan(subj,grade,title){
+  document.getElementById('d-subj').value=subj;
+  document.getElementById('d-grade').selectedIndex=parseInt(grade)-1;
+  document.getElementById('d-unit').value=title;
+  nav('design');
+  toast('指導案を参考として設定しました。要望欄に自校の特性を追記してください。');
+}
+
+// ============================================================
+// DESIGN
+// ============================================================
+function setMode(btn){
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function generatePlan(){
+  const subj=document.getElementById('d-subj').value;
+  const grade=document.getElementById('d-grade').value;
+  const jisuu=document.getElementById('d-jisuu').value;
+  const unit=document.getElementById('d-unit').value.trim();
+  const aim=document.getElementById('d-aim').value.trim();
+  const question=document.getElementById('d-question').value.trim();
+  const request=document.getElementById('d-request').value.trim();
+  if(!unit){ toast('単元名を入力してください'); return; }
+
+  const btn=document.getElementById('btn-gen-plan');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"></span> 生成中...';
+  document.getElementById('design-output').innerHTML=`<div class="output-card"><div class="loading"><span class="spin"></span> AIが授業計画を作成しています...</div></div>`;
+
+  const prompt=`あなたは経験豊富な中学校教員です。以下の条件で授業計画（学習指導案の骨子）を作成してください。
+
+【教科】${SUBJ[subj].label}
+【学年】中学${grade}
+【単元名】${unit}
+【時数】${jisuu}
+【本時のねらい】${aim||'（未設定）'}
+【主な発問】${question||'（未設定）'}
+【特記事項・要望】${request||'なし'}
+
+以下の形式で出力してください：
+## 単元・本時
+## ねらい
+## 展開（導入・展開・まとめ　各パートを記述）
+## 主な発問
+## 評価の視点
+## 備考・支援が必要な生徒への配慮
+
+簡潔かつ実用的に、現場の先生がすぐ使えるレベルで記述してください。日本語で出力してください。`;
+
+  try{
+    const res = await callClaude(apiKey, prompt);
+    currentPlan = {subj, grade, unit, content: res};
+    document.getElementById('design-output').innerHTML=`
+      <div class="output-card">
+        <div class="output-head">AI 生成 — 授業計画（素案）<span style="font-weight:400;font-size:10px;">${SUBJ[subj].label} 中学${grade} / ${unit}</span></div>
+        <div class="output-body">${markdownToHtml(res)}</div>
+        <div class="output-footer">
+          <button class="btn btn-sm btn-primary" onclick="savePlan()">💾 ワークスペースに保存</button>
+          <button class="btn btn-sm" onclick="copyText()">📋 コピー</button>
+        </div>
+      </div>`;
+  }catch(e){
+    document.getElementById('design-output').innerHTML=`<div class="output-card" style="color:var(--danger);">エラー: ${e.message}</div>`;
+  }
+  btn.disabled=false; btn.innerHTML='🤖 授業計画を生成';
+}
+
+function savePlan(){
+  if(!currentPlan){ toast('先にAIで授業計画を生成してください'); return; }
+  wsCounter++;
+  const id = Date.now();
+  const name = `#${wsCounter} ${currentPlan.unit}`;
+  wsFiles.push({id, name, subj:currentPlan.subj, grade:currentPlan.grade, unit:currentPlan.unit, content:currentPlan.content});
+  saveAll();
+  renderWs();
+  buildTestFileList();
+  toast(`ワークスペースに「${name}」として保存しました`);
+}
+
+function renderWs(){
+  const area=document.getElementById('ws-area');
+  if(!wsFiles.length){ area.innerHTML='<div style="font-size:10px;color:#444;padding:4px 8px;">保存された授業計画がここに表示されます</div>'; return; }
+  area.innerHTML=wsFiles.map(f=>`
+    <div class="ws-file${selectedWsFile&&selectedWsFile.id===f.id?' active':''}" onclick="selectWsFile(${f.id})">
+      <div class="subj-dot ${SUBJ[f.subj]?.dot||''}"></div>
+      <div class="ws-file-name" title="${f.name}">${f.name}</div>
+      <span style="font-size:10px;color:#444;cursor:pointer;padding:2px;" onclick="event.stopPropagation();openRename(${f.id})" title="名前を変更">✎</span>
+    </div>`).join('');
+}
+
+function selectWsFile(id){
+  selectedWsFile = wsFiles.find(f=>f.id===id)||null;
+  renderWs();
+  buildTestFileList();
+}
+
+function openRename(id){
+  renameTarget=id;
+  const f=wsFiles.find(f=>f.id===id);
+  document.getElementById('rename-input').value=f?f.name:'';
+  document.getElementById('modal-rename').style.display='flex';
+}
+function doRename(){
+  if(!renameTarget) return;
+  const name=document.getElementById('rename-input').value.trim();
+  if(!name){ toast('名前を入力してください'); return; }
+  const f=wsFiles.find(f=>f.id===renameTarget);
+  if(f) f.name=name;
+  saveAll(); renderWs(); buildTestFileList(); closeModal('modal-rename');
+  toast('名前を変更しました');
+}
+
+// ============================================================
+// RUBRIC
+// ============================================================
+async function generateRubric(support){
+  const unit=document.getElementById('r-unit').value.trim();
+  const scene=document.getElementById('r-scene').value;
+  const subj=document.getElementById('r-subj').value;
+  if(!unit){ toast('単元名を入力してください'); return; }
+
+  const btn=document.getElementById('btn-rubric');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> 生成中...';
+  document.getElementById('rubric-output').innerHTML=`<div class="output-card"><div class="loading"><span class="spin"></span> ルーブリックを作成しています...</div></div>`;
+
+  const prompt=`中学校${SUBJ[subj].label}の「${unit}」単元（評価場面：${scene}）について、3観点のルーブリックをJSON形式で作成してください。
+${support?'※特別支援学級の生徒向けに、より具体的で段階的な基準にしてください。':''}
+
+以下のJSON形式のみで出力してください（他の文字は不要）:
+{
+  "rows": [
+    {
+      "obs": "知識・技能",
+      "note": "評価の観点の説明（20字以内）",
+      "a": "A評価の文言（50字程度）",
+      "b": "B評価の文言（50字程度）",
+      "c": "C評価の文言（50字程度）"
+    },
+    {
+      "obs": "思考・判断・表現",
+      "note": "評価の観点の説明（20字以内）",
+      "a": "A評価の文言",
+      "b": "B評価の文言",
+      "c": "C評価の文言"
+    },
+    {
+      "obs": "主体的に学習に取り組む態度",
+      "note": "評価の観点の説明（20字以内）",
+      "a": "A評価の文言",
+      "b": "B評価の文言",
+      "c": "C評価の文言"
+    }
+  ]
+}`;
+
+  try{
+    const res=await callClaude(apiKey,prompt);
+    const clean=res.replace(/```json|```/g,'').trim();
+    const data=JSON.parse(clean);
+    document.getElementById('rubric-output').innerHTML=`
+      <div style="margin-bottom:8px;display:flex;gap:8px;">
+        <button class="btn btn-sm">📄 PDF出力</button>
+        <button class="btn btn-sm" onclick="copyText()">📋 コピー</button>
+      </div>
+      <table class="rubric-table">
+        <thead><tr>
+          <th style="width:22%">観点</th>
+          <th><span class="grade-a">A — 十分満足できる</span></th>
+          <th><span class="grade-b">B — おおむね満足できる</span></th>
+          <th><span class="grade-c">C — 努力を要する</span></th>
+        </tr></thead>
+        <tbody>${data.rows.map(r=>`<tr>
+          <td><strong>${r.obs}</strong><span class="obs-note">${r.note||''}</span></td>
+          <td>${r.a}</td><td>${r.b}</td><td>${r.c}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  }catch(e){
+    document.getElementById('rubric-output').innerHTML=`<div class="output-card" style="color:var(--danger);">エラー: ${e.message}<br><small>JSONパースに失敗しました。再試行してください。</small></div>`;
+  }
+  btn.disabled=false; btn.innerHTML='🤖 ルーブリックを生成';
+}
+
+// ============================================================
+// TEST
+// ============================================================
+function buildTestFileList(){
+  const container=document.getElementById('test-file-list');
+  if(!wsFiles.length){ container.innerHTML='<div style="padding:12px;font-size:11px;color:var(--text2);">授業設計からワークスペースに保存した計画がここに表示されます。</div>'; return; }
+  container.innerHTML=wsFiles.map((f,i)=>`
+    <div class="file-item${selectedWsFile&&selectedWsFile.id===f.id?' selected':''}" onclick="selectTestFile(${f.id})">
+      <input type="radio" name="ws-radio" ${selectedWsFile&&selectedWsFile.id===f.id?'checked':''}>
+      <div class="file-info">
+        <div class="file-name-text">${f.name}</div>
+        <div class="file-meta">${SUBJ[f.subj]?.label||''} 中学${f.grade} / ${f.unit}</div>
+      </div>
+    </div>`).join('');
+}
+
+function selectTestFile(id){
+  selectedWsFile=wsFiles.find(f=>f.id===id)||null;
+  renderWs();
+  buildTestFileList();
+}
+
+function toggleObs(id){
+  const el=document.getElementById(id);
+  if(currentObs.has(id)){ currentObs.delete(id); el.classList.remove('selected'); }
+  else{ currentObs.add(id); el.classList.add('selected'); }
+}
+
+function setQtype(btn,type){
+  document.querySelectorAll('.qtype-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentQtype=type;
+}
+
+async function generateTest(){
+  if(!selectedWsFile){ toast('STEP1で授業計画を選択してください'); return; }
+
+  const btn=document.getElementById('btn-test');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> 生成中...';
+  document.getElementById('test-output').innerHTML='';
+
+  const obsLabels={'obs-a':'知識・技能','obs-b':'思考・判断・表現','obs-c':'主体的に学習に取り組む態度'};
+  const selectedObsNames=[...currentObs].map(k=>obsLabels[k]);
+  const aiRecommend=selectedObsNames.length===0;
+  const obsText=aiRecommend?'（観点はAIがおすすめを判定してください）':selectedObsNames.join('・');
+
+  const isBig=currentQtype==='大問';
+  const isSub2=currentQtype==='小問2';
+  const isSub3=currentQtype==='小問3';
+
+  let formatInstruction='';
+  if(isBig) formatInstruction=`大問形式：異なる系統の大問を3パターン作成。各パターンは独立した問題として完結すること。`;
+  if(isSub2) formatInstruction=`小問形式：一つの大きな命題に対して(1)(2)の2問が地続きになった問題セットを3パターン作成。`;
+  if(isSub3) formatInstruction=`小問形式：一つの大きな命題に対して(1)(2)(3)の3問が地続きになった問題セットを3パターン作成。`;
+
+  const prompt=`あなたは経験豊富な中学校教員です。以下の授業計画をもとに、定期テストに使用できる品質のテスト問題の素案を作成してください。
+
+【授業計画】
+${selectedWsFile.content}
+
+【条件】
+- 教科: ${SUBJ[selectedWsFile.subj]?.label}
+- 学年: 中学${selectedWsFile.grade}
+- 評価の観点: ${obsText}
+- 問題形式: ${formatInstruction}
+
+以下のJSON形式のみで出力してください:
+{
+  "patterns": [
+    {
+      "label": "パターンA",
+      "obs": "この問題が測る観点名",
+      "aiRec": ${aiRecommend},
+      "question": "問題文（小問の場合は(1)(2)...の形式で記述）"
+    },
+    { "label": "パターンB", "obs": "...", "aiRec": ${aiRecommend}, "question": "..." },
+    { "label": "パターンC", "obs": "...", "aiRec": ${aiRecommend}, "question": "..." }
+  ]
+}`;
+
+  try{
+    const res=await callClaude(apiKey,prompt,1500);
+    const clean=res.replace(/```json|```/g,'').trim();
+    const data=JSON.parse(clean);
+    document.getElementById('test-output').innerHTML=`
+      <div class="output-card" style="margin-top:14px;">
+        <div class="output-head">素案出力 — ${selectedWsFile.name} / ${currentQtype}形式</div>
+        <div class="notice">⚠️ <strong>留意点：</strong>本素案は定期テストに活用できる品質を目指して生成しています。あくまで素案ですので、学校・学級の実態や生徒の習熟度に合わせて加工・修正のうえご活用ください。出題の最終判断は必ず担当教師が行ってください。</div>
+        ${data.patterns.map(p=>`
+          <div class="q-block">
+            <div class="q-label">${p.label}</div>
+            <span class="q-obs-tag${p.aiRec?' ai-rec':''}">${p.aiRec?'★ AIおすすめ観点：':''}${p.obs}</span>
+            <div class="q-text">${p.question}</div>
+          </div>`).join('')}
+        <div class="output-footer">
+          <button class="btn btn-sm btn-primary">📄 PDF出力</button>
+          <button class="btn btn-sm" onclick="copyText()">📋 コピー</button>
+          <button class="btn btn-sm" onclick="generateTest()">🔄 再生成</button>
+        </div>
+      </div>`;
+  }catch(e){
+    document.getElementById('test-output').innerHTML=`<div class="output-card" style="color:var(--danger);margin-top:14px;">エラー: ${e.message}</div>`;
+  }
+  btn.disabled=false; btn.innerHTML='🤖 素案を生成';
+}
+
+// ============================================================
+// MEMO
+// ============================================================
+function renderMemoList(){
+  const container=document.getElementById('memo-items');
+  if(!memos.length){ container.innerHTML='<div style="padding:10px 12px;font-size:11px;color:var(--text2);">メモはまだありません</div>'; return; }
+  container.innerHTML=memos.map(m=>`
+    <div class="memo-item${m.id===currentMemoId?' active':''}" onclick="selectMemo(${m.id})">
+      <div class="memo-item-title">${m.title||'無題のメモ'}</div>
+      <div class="memo-item-preview">${m.body||''}</div>
+      <div class="memo-item-date">${m.date||''}</div>
+    </div>`).join('');
+}
+function selectMemo(id){
+  currentMemoId=id;
+  const m=memos.find(m=>m.id===id);
+  if(m){ document.getElementById('memo-title').value=m.title||''; document.getElementById('memo-body').value=m.body||''; }
+  renderMemoList();
+}
+function newMemo(){
+  const id=Date.now();
+  const now=new Date();
+  const date=`${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  memos.unshift({id,title:'新しいメモ',body:'',date});
+  currentMemoId=id;
+  saveAll(); renderMemoList();
+  document.getElementById('memo-title').value='新しいメモ';
+  document.getElementById('memo-body').value='';
+  document.getElementById('memo-title').focus();
+  document.getElementById('memo-title').select();
+}
+function saveMemo(){
+  if(!currentMemoId) return;
+  const m=memos.find(m=>m.id===currentMemoId);
+  if(!m) return;
+  m.title=document.getElementById('memo-title').value;
+  m.body=document.getElementById('memo-body').value;
+  saveAll(); renderMemoList();
+}
+function deleteMemo(){
+  if(!currentMemoId) return;
+  if(!confirm('このメモを削除しますか？')) return;
+  memos=memos.filter(m=>m.id!==currentMemoId);
+  currentMemoId=null;
+  document.getElementById('memo-title').value='';
+  document.getElementById('memo-body').value='';
+  saveAll(); renderMemoList();
+}
+
+// ============================================================
+// SETTINGS — AI ハイブリッド
+// ============================================================
+let currentAI = 'gemini';
+
+const AI_CONFIG = {
+  gemini:{
+    label:'Gemini Flash', icon:'🔵', saveKey:'apiKey_gemini',
+    call:async(key,prompt,max=1000)=>{
+      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:max}})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+      const d=await r.json();
+      return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    }
+  },
+  gpt:{
+    label:'GPT-4o mini', icon:'🟢', saveKey:'apiKey_gpt',
+    call:async(key,prompt,max=1000)=>{
+      const r=await fetch('https://api.openai.com/v1/chat/completions',
+        {method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+         body:JSON.stringify({model:'gpt-4o-mini',max_tokens:max,messages:[{role:'user',content:prompt}]})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+      const d=await r.json();
+      return d.choices?.[0]?.message?.content||'';
+    }
+  },
+  claude:{
+    label:'Claude Sonnet', icon:'🟠', saveKey:'apiKey_claude',
+    call:async(key,prompt,max=1000)=>{
+      const r=await fetch('https://api.anthropic.com/v1/messages',
+        {method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+         body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,messages:[{role:'user',content:prompt}]})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+      const d=await r.json();
+      return d.content?.[0]?.text||'';
+    }
+  }
+};
+
+async function callAI(prompt, maxTokens=1000){
+  const cfg=AI_CONFIG[currentAI];
+  const key=load(cfg.saveKey,'');
+  if(!key){ toast('設定画面でAPIキーを入力してください'); nav('settings'); throw new Error('APIキー未設定'); }
+  return cfg.call(key, prompt, maxTokens);
+}
+
+function selectAI(ai){
+  currentAI=ai;
+  save('currentAI',ai);
+  ['gemini','gpt','claude'].forEach(a=>{
+    const opt=document.getElementById('ai-opt-'+a);
+    const chk=document.getElementById('check-'+a);
+    const card=document.getElementById('key-card-'+a);
+    if(opt) opt.classList.toggle('active',a===ai);
+    if(chk) chk.textContent=a===ai?'✓':'';
+    if(card) card.style.display=a===ai?'':'none';
+  });
+  const ind=document.getElementById('ai-indicator');
+  if(ind) ind.innerHTML=`${AI_CONFIG[ai].icon} ${AI_CONFIG[ai].label} で生成`;
+}
+
+function saveKey(ai){
+  const key=document.getElementById('key-'+ai).value.trim();
+  if(!key){ toast('APIキーを入力してください'); return; }
+  save(AI_CONFIG[ai].saveKey,key);
+  document.getElementById('status-'+ai).innerHTML='<span class="api-status ok">✓ 保存済み（未検証）</span>';
+  toast(`${AI_CONFIG[ai].label} のAPIキーを保存しました`);
+}
+async function testKey(ai){
+  const key=document.getElementById('key-'+ai).value.trim();
+  if(!key){ toast('APIキーを入力してください'); return; }
+  document.getElementById('status-'+ai).innerHTML='<span class="loading"><span class="spin"></span> 接続テスト中...</span>';
+  try{
+    await AI_CONFIG[ai].call(key,'テスト',20);
+    document.getElementById('status-'+ai).innerHTML='<span class="api-status ok">✓ 接続成功！APIキーは有効です</span>';
+    save(AI_CONFIG[ai].saveKey,key);
+  }catch(e){
+    document.getElementById('status-'+ai).innerHTML=`<span class="api-status ng">✗ 接続失敗: ${e.message}</span>`;
+  }
+}
+
+// 旧関数（互換用）
+function saveApiKey(){
+  saveKey(currentAI);
+}
+async function testApiKey(){ testKey(currentAI); }
+function exportData(){
+  const data={weekData,wsFiles,wsCounter,memos};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='jugyo_assist_backup.json'; a.click();
+}
+function importData(){ document.getElementById('import-file').click(); }
+function handleImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.weekData) weekData=data.weekData;
+      if(data.wsFiles) wsFiles=data.wsFiles;
+      if(data.wsCounter) wsCounter=data.wsCounter;
+      if(data.memos) memos=data.memos;
+      saveAll(); renderWs(); renderMemoList(); buildTestFileList();
+      toast('データをインポートしました');
+    }catch(err){ toast('インポートに失敗しました'); }
+  };
+  reader.readAsText(file);
+}
+function clearData(){
+  if(!confirm('すべてのデータを削除しますか？この操作は元に戻せません。')) return;
+  weekData={}; wsFiles=[]; wsCounter=0; memos=[]; currentMemoId=null; selectedWsFile=null;
+  saveAll(); renderWs(); renderMemoList(); buildTestFileList();
+  toast('データを削除しました');
+}
+
+// ============================================================
+// API — callClaude は callAI のラッパー（後方互換）
+// ============================================================
+async function callClaude(apiKey, prompt, maxTokens=1000){
+  return callAI(prompt, maxTokens);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function markdownToHtml(text){
+  return text
+    .replace(/^## (.+)$/gm,'<h4>$1</h4>')
+    .replace(/^### (.+)$/gm,'<h4>$1</h4>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+}
+function copyText(){
+  const output=document.querySelector('.output-body,.q-text');
+  if(output){ navigator.clipboard.writeText(output.innerText); toast('コピーしました'); }
+}
+function openFeedback(){ window.open('https://forms.gle/UUn1Wvd15GS9taXu6','_blank'); toast('フィードバックフォームを開きました'); }
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+function closeModal(id){ document.getElementById(id).style.display='none'; }
+
+// ============================================================
+// INIT
+// ============================================================
+loadAll();
+// AI設定復元
+const savedAI = load('currentAI','gemini');
+selectAI(savedAI);
+// 保存済みキーを入力欄に反映
+['gemini','gpt','claude'].forEach(ai=>{
+  const key=load(AI_CONFIG[ai].saveKey,'');
+  const el=document.getElementById('key-'+ai);
+  if(key && el) el.value=key;
+  if(key) document.getElementById('status-'+ai).innerHTML='<span class="api-status ok">✓ APIキー設定済み</span>';
+});
+nav('weekly');
+renderWeek();
+dbSearch();
+</script>
+</body>
+</html>
