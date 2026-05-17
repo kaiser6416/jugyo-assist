@@ -929,8 +929,11 @@ async function dbSearch(){
 5件提案してください。`;
 
     const res = await callAI(prompt, 800);
-    const clean = res.replace(/\`\`\`json|\`\`\`/g,'').trim();
-    const results = JSON.parse(clean);
+    let clean = res.replace(/```json|```/g,'').trim();
+    // JSON部分だけ抽出
+    const jsonMatch = clean.match(/\[[\s\S]*\]/);
+    if(!jsonMatch) throw new Error('JSONが見つかりません');
+    const results = JSON.parse(jsonMatch[0]);
 
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(q+' 指導案 中学校')}`;
     document.getElementById('db-count').innerHTML = `「${q}」の検索結果 <strong>${results.length}件</strong>（AI提案）　<a href="${googleUrl}" target="_blank" style="font-size:11px;color:var(--accent);">🔍 Googleでも検索する</a>`;
