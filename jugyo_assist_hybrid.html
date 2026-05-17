@@ -915,18 +915,13 @@ async function dbSearch(){
   document.getElementById('db-results').innerHTML = '';
 
   try {
-    const prompt = `あなたは教育の専門家です。「${q}」${sLabel?'（'+sLabel+'）':''}${gLabel}の中学校授業指導案を探しています。
-以下の形式でJSON配列のみを返してください（他の文字は不要）：
-[
-  {
-    "title": "指導案のタイトル（具体的に）",
-    "source": "出典・機関名（例：○○県教育委員会、文部科学省）",
-    "url": "https://www.mext.go.jp/ などの実在しそうなURL",
-    "summary": "指導案の概要（2文）",
-    "type": "pdf または web"
-  }
-]
-5件提案してください。`;
+    const prompt = `中学校の授業指導案を5件提案してください。キーワード：「${q}」${sLabel}${gLabel}
+
+必ずJSON配列のみ返答してください。説明文や前置きは一切不要です。
+
+[{"title":"タイトル","source":"出典機関名","url":"https://example.com","summary":"概要2文","type":"web"},{"title":"タイトル2","source":"出典2","url":"https://example2.com","summary":"概要2","type":"pdf"}]
+
+上記の形式で5件。urlは教育委員会や文部科学省など実在しそうなものにしてください。`;
 
     const res = await callAI(prompt, 800);
     let clean = res.replace(/```json|```/g,'').trim();
