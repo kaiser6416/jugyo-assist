@@ -1068,6 +1068,8 @@ function renderWs(){
       <div class="subj-dot ${SUBJ[f.subj]?.dot||''}"></div>
       <div class="ws-file-name" title="${f.name}">${f.name}</div>
       <span style="font-size:10px;color:#444;cursor:pointer;padding:2px;" onclick="event.stopPropagation();openRename(${f.id})" title="名前を変更">✎</span>
+      <span style="font-size:10px;color:#444;cursor:pointer;padding:2px;" onclick="event.stopPropagation();viewWsFile(${f.id})" title="内容を見る">👁</span>
+      <span style="font-size:10px;color:#c0392b;cursor:pointer;padding:2px;" onclick="event.stopPropagation();deleteWsFile(${f.id})" title="削除">🗑</span>
     </div>`).join('');
 }
 
@@ -1075,6 +1077,43 @@ function selectWsFile(id){
   selectedWsFile = wsFiles.find(f=>f.id===id)||null;
   renderWs();
   buildTestFileList();
+}
+
+function viewWsFile(id){
+  const f = wsFiles.find(f=>f.id===id);
+  if(!f) return;
+  // 授業設計パネルに内容を表示
+  nav('design');
+  document.getElementById('d-unit').value = f.unit || f.name;
+  document.getElementById('d-subj').value = f.subj || 'math';
+  document.getElementById('design-output').innerHTML = `
+    <div class="output-card">
+      <div class="output-head">${f.name}</div>
+      <div class="output-body">${markdownToHtml(f.content||'内容がありません')}</div>
+      <div class="output-footer">
+        <button class="btn btn-sm" onclick="copyWsContent(${f.id})">📋 コピー</button>
+      </div>
+    </div>`;
+  currentPlan = {subj: f.subj, grade: f.grade, unit: f.unit, content: f.content};
+  toast(f.name + ' を表示しました');
+}
+
+function copyWsContent(id){
+  const f = wsFiles.find(f=>f.id===id);
+  if(!f) return;
+  navigator.clipboard.writeText(f.content||'').then(()=>toast('コピーしました'));
+}
+
+function deleteWsFile(id){
+  const f = wsFiles.find(f=>f.id===id);
+  if(!f) return;
+  if(!confirm(f.name + ' を削除しますか？')) return;
+  wsFiles = wsFiles.filter(f=>f.id!==id);
+  if(selectedWsFile && selectedWsFile.id===id) selectedWsFile=null;
+  saveAll();
+  renderWs();
+  buildTestFileList();
+  toast('削除しました');
 }
 
 function openRename(id){
