@@ -311,8 +311,11 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
 
     <!-- ===== 指導案 DB ===== -->
     <div class="panel" id="panel-database">
+      <div style="background:#fff8ed;border:1px solid #e8c86a;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a5800;margin-bottom:12px;line-height:1.7;">
+        💡 キーワードを入力して検索すると、Web上の指導案・教育委員会資料・PDFを検索します。見つからない場合もあります。
+      </div>
       <div class="search-row">
-        <input type="text" id="db-q" placeholder="単元名・キーワードで検索..." />
+        <input type="text" id="db-q" placeholder="例：一次方程式　光合成　鎌倉幕府..." />
         <select id="db-subj">
           <option value="">全教科</option>
           <option value="math">数学</option>
@@ -327,19 +330,31 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
           <option value="2">2年</option>
           <option value="3">3年</option>
         </select>
-        <button class="btn btn-primary" onclick="dbSearch()">🔍 検索</button>
+        <button class="btn btn-primary" onclick="dbSearch()">🔍 Web検索</button>
       </div>
-      <div class="db-count" id="db-count"></div>
+      <div class="db-count" id="db-count">キーワードを入力して検索してください</div>
       <div id="db-results"></div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;">⭐ お気に入り登録済み</div>
+        <div id="db-favorites"></div>
+      </div>
     </div>
 
     <!-- ===== 授業設計 ===== -->
     <div class="panel" id="panel-design">
       <div class="mode-tabs">
-        <button class="mode-tab active" onclick="setMode(this,'manual')">✏️ 手動で作成</button>
-        <button class="mode-tab" onclick="setMode(this,'ai')">🤖 AI に丸投げ</button>
-        <button class="mode-tab" onclick="setMode(this,'hybrid')">📄 指導案を参考に設計</button>
+        <button class="mode-tab active" id="mode-tab-manual" onclick="setMode(this,'manual')">✏️ 手動で作成</button>
+        <button class="mode-tab" id="mode-tab-ai" onclick="setMode(this,'ai')">🤖 AIに丸投げ</button>
+        <button class="mode-tab" id="mode-tab-ref" onclick="setMode(this,'ref')">📄 指導案を参考に設計</button>
       </div>
+
+      <!-- 参考指導案表示エリア（指導案参考モードのみ） -->
+      <div id="ref-plan-area" style="display:none;background:#f0faf6;border:1px solid #9fd4bc;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:4px;">参考指導案</div>
+        <div id="ref-plan-title" style="font-weight:500;color:var(--text);"></div>
+        <a id="ref-plan-url" href="#" target="_blank" style="font-size:10px;color:var(--accent);">🔗 元ページを見る</a>
+      </div>
+
       <div class="grid3">
         <div class="form-row">
           <label class="form-label">教科</label>
@@ -354,10 +369,9 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
           <select id="d-jisuu"><option>1時間</option><option>2時間</option><option>3時間</option><option>4時間</option><option>5時間</option><option>6時間</option></select>
         </div>
       </div>
-      <div class="form-row"><label class="form-label">単元名</label><input type="text" id="d-unit" placeholder="例：一次方程式の解き方" /></div>
-      <div class="form-row"><label class="form-label">本時のねらい</label><textarea id="d-aim" placeholder="この授業で生徒に学んでほしいこと..."></textarea></div>
-      <div class="form-row"><label class="form-label">主な発問（任意）</label><textarea id="d-question" placeholder="例：「植物はどこでエネルギーを作っているのか？」"></textarea></div>
-      <div class="form-row"><label class="form-label">自校の特性・AI への要望</label><textarea id="d-request" placeholder="例：少人数18名。探究型でペア活動を取り入れてほしい。支援級の生徒が2名います。"></textarea></div>
+      <div class="form-row"><label class="form-label">単元名 <span style="color:var(--accent);">*必須</span></label><input type="text" id="d-unit" placeholder="例：一次方程式の解き方" /></div>
+      <div class="form-row"><label class="form-label">本時のねらい（任意・省略するとAIが考えます）</label><textarea id="d-aim" placeholder="例：移項を使って一次方程式を解くことができる"></textarea></div>
+      <div class="form-row" id="request-row"><label class="form-label">要望・自校の特性（任意）</label><textarea id="d-request" placeholder="例：少人数18名。探究型でペア活動を取り入れてほしい。支援級の生徒が2名います。"></textarea></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-accent" onclick="generatePlan()" id="btn-gen-plan">🤖 授業計画を生成</button>
         <button class="btn" onclick="savePlan()" id="btn-save-plan">💾 ワークスペースに保存</button>
@@ -764,7 +778,6 @@ function saveCell(){
   const subj=document.getElementById('mc-subj').value;
   const title=document.getElementById('mc-title').value.trim();
   const link=document.getElementById('mc-link').value.trim();
-  if(!title){ toast('タイトルを入力してください'); return; }
   weekData[key]={subj,title,link};
   saveAll(); closeModal('modal-cell'); renderWeek();
 }
@@ -832,9 +845,17 @@ function useDbPlan(subj,grade,title){
 // ============================================================
 // DESIGN
 // ============================================================
-function setMode(btn){
+let currentDesignMode = 'manual';
+function setMode(btn, mode){
   document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  currentDesignMode = mode;
+  // 参考指導案エリアの表示制御
+  const refArea = document.getElementById('ref-plan-area');
+  if(refArea) refArea.style.display = mode==='ref' ? '' : 'none';
+  // 手動モードのみ生成ボタンを隠す
+  const genBtn = document.getElementById('btn-gen-plan');
+  if(genBtn) genBtn.style.display = mode==='manual' ? 'none' : '';
 }
 
 async function generatePlan(){
@@ -852,15 +873,19 @@ async function generatePlan(){
   btn.innerHTML='<span class="spin"></span> 生成中...';
   document.getElementById('design-output').innerHTML=`<div class="output-card"><div class="loading"><span class="spin"></span> AIが授業計画を作成しています...</div></div>`;
 
+  const refTitle = document.getElementById('ref-plan-title') ? document.getElementById('ref-plan-title').textContent : '';
+  const isRef = currentDesignMode === 'ref' && refTitle;
+  const refNote = isRef ? `【参考指導案】${refTitle}` : '';
+
   const prompt=`あなたは経験豊富な中学校教員です。以下の条件で授業計画（学習指導案の骨子）を作成してください。
 
 【教科】${SUBJ[subj].label}
 【学年】中学${grade}
 【単元名】${unit}
 【時数】${jisuu}
-【本時のねらい】${aim||'（未設定）'}
-【主な発問】${question||'（未設定）'}
+【本時のねらい】${aim||'（AIが最適なねらいを設定してください）'}
 【特記事項・要望】${request||'なし'}
+${refNote}
 
 以下の形式で出力してください：
 ## 単元・本時
@@ -873,7 +898,7 @@ async function generatePlan(){
 簡潔かつ実用的に、現場の先生がすぐ使えるレベルで記述してください。日本語で出力してください。`;
 
   try{
-    const res = await callClaude(apiKey, prompt);
+    const res = await callAI(prompt);
     currentPlan = {subj, grade, unit, content: res};
     document.getElementById('design-output').innerHTML=`
       <div class="output-card">
@@ -979,7 +1004,7 @@ ${support?'※特別支援学級の生徒向けに、より具体的で段階的
 }`;
 
   try{
-    const res=await callClaude(apiKey,prompt);
+    const res=await callAI(prompt);
     const clean=res.replace(/```json|```/g,'').trim();
     const data=JSON.parse(clean);
     document.getElementById('rubric-output').innerHTML=`
@@ -1086,7 +1111,7 @@ ${selectedWsFile.content}
 }`;
 
   try{
-    const res=await callClaude(apiKey,prompt,1500);
+    const res=await callAI(prompt,1500);
     const clean=res.replace(/```json|```/g,'').trim();
     const data=JSON.parse(clean);
     document.getElementById('test-output').innerHTML=`
@@ -1204,7 +1229,6 @@ const AI_CONFIG = {
 async function callAI(prompt, maxTokens=1000){
   const cfg=AI_CONFIG[currentAI];
   const key=load(cfg.saveKey,'');
-  if(!key){ toast('設定画面でAPIキーを入力してください'); nav('settings'); throw new Error('APIキー未設定'); }
   return cfg.call(key, prompt, maxTokens);
 }
 
@@ -1322,7 +1346,9 @@ selectAI(savedAI);
 });
 nav('weekly');
 renderWeek();
-dbSearch();
+renderFavorites();
+// 初期表示時は検索結果なし
+document.getElementById('db-count').textContent = 'キーワードを入力して検索してください';
 </script>
 </body>
 </html>
