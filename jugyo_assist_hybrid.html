@@ -1445,15 +1445,15 @@ async function callClaude(apiKey, prompt, maxTokens=1000){
 // ============================================================
 let chatHistory = [];
 
-const CHAT_SYSTEM = `あなたは経験豊富な中学校教員のメンターです。相談者は現役の教員です。
-以下の方針で対応してください：
-- 共感的で温かい口調で接する
-- 具体的で実践的なアドバイスをする
-- 授業計画を求められた場合は、複数時間にわたる連続した授業案を出力する
-- 生徒指導・保護者対応の相談には、段階的な対処法を示す
-- 「先生」「教員」として相手をリスペクトした言い方をする
-- 回答は長すぎず、読みやすい形式にする
-- 必要に応じて箇条書きや見出しを使う`;
+const CHAT_SYSTEM = 'あなたは経験豊富な中学校教員のメンターです。相談者は現役の教員です。\n' +
+  '以下の方針で対応してください：\n' +
+  '- 共感的で温かい口調で接する\n' +
+  '- 具体的で実践的なアドバイスをする\n' +
+  '- 授業計画を求められた場合は、複数時間にわたる連続した授業案を出力する\n' +
+  '- 生徒指導・保護者対応の相談には、段階的な対処法を示す\n' +
+  '- 先生・教員として相手をリスペクトした言い方をする\n' +
+  '- 回答は長すぎず、読みやすい形式にする\n' +
+  '- 必要に応じて箇条書きや見出しを使う';
 
 async function sendChat(){
   const input = document.getElementById('chat-input');
@@ -1474,18 +1474,10 @@ async function sendChat(){
   appendChatMsg('assistant', '<span class="loading"><span class="spin"></span> 考え中...</span>', loadId);
   
   try {
-    // チャット専用のAPI呼び出し（システムプロンプト付き）
-    const messages = [{role:'user', content: CHAT_SYSTEM + '
+    const historyText = chatHistory.map(m=>(m.role==='user'?'先生: ':'あなた: ')+m.content).join('\n');
+    const prompt = CHAT_SYSTEM + '\n\n以下の会話の続きとして返答してください：\n\n' + historyText;
+    const res = await callAI(prompt, 1200);
 
-' + chatHistory.map(m => (m.role==='user'?'【先生】':'【あなた】') + m.content).join('
-
-')}];
-    const res = await callAI(CHAT_SYSTEM + '
-
-以下の会話の続きとして返答してください：
-
-' + chatHistory.map(m=>(m.role==='user'?'先生: ':'あなた: ')+m.content).join('
-'), 1200);
     
     // ローディングを実際の返答に差し替え
     const loadEl = document.getElementById(loadId);
@@ -1498,7 +1490,9 @@ async function sendChat(){
       if(loadEl2){
         const saveBtn = document.createElement('div');
         saveBtn.style.marginTop = '10px';
-        saveBtn.innerHTML = `<button class="btn btn-sm btn-primary" onclick="saveChatPlan('${encodeURIComponent(res.substring(0,50))}', \`${encodeURIComponent(res)}\`)">💾 ワークスペースに保存</button>`;
+        const encTitle = encodeURIComponent(res.substring(0,50));
+        const encBody = encodeURIComponent(res);
+        saveBtn.innerHTML = '<button class="btn btn-sm btn-primary" onclick="saveChatPlan(decodeURIComponent(\'' + encTitle + '\'), decodeURIComponent(\'' + encBody + '\'))">💾 ワークスペースに保存</button>';
         loadEl2.appendChild(saveBtn);
       }
     }
