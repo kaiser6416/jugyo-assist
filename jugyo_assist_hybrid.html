@@ -225,6 +225,11 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
 .settings-note a{color:var(--accent);}
 
 
+/* ========== チャット ========== */
+#chat-messages::-webkit-scrollbar{width:4px;}
+#chat-messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+#chat-input:focus{border-color:var(--accent);}
+
 /* ========== AI SELECTOR ========== */
 .ai-selector{display:flex;flex-direction:column;gap:8px;}
 .ai-option{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1.5px solid var(--border2);border-radius:var(--radius);cursor:pointer;transition:all 0.15s;}
@@ -271,6 +276,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
   <div class="nav-item" onclick="nav('rubric')" id="nav-rubric"><span class="ni">📊</span>評価・ルーブリック</div>
   <div class="nav-item" onclick="nav('test')" id="nav-test"><span class="ni">📝</span>テスト素案</div>
   <div class="nav-item" onclick="nav('memo')" id="nav-memo"><span class="ni">🗒</span>メモパッド</div>
+  <div class="nav-item" onclick="nav('chat')" id="nav-chat"><span class="ni">💬</span>先生相談室</div>
 
   <div class="nav-section" style="margin-top:4px;">ワークスペース</div>
   <div class="ws-area" id="ws-area">
@@ -442,7 +448,23 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
       </div>
     </div>
 
-    <!-- ===== 設定 ===== -->
+    <!-- ===== 先生相談室 ===== -->
+    <div class="panel" id="panel-chat">
+      <div style="display:flex;flex-direction:column;height:calc(100vh - 90px);">
+        <div style="background:var(--accent2);border:1px solid var(--accent3);border-radius:var(--radius2);padding:12px 16px;margin-bottom:12px;font-size:12px;color:var(--accent);line-height:1.7;">
+          💬 <strong>先生相談室</strong>へようこそ。授業づくり・生徒指導・保護者対応・学級経営など、なんでも気軽に相談してください。<br>
+          例：「来週から3時間探究ベースの授業を計画したい」「クラスに問題を抱えた生徒がいて悩んでいる」
+        </div>
+        <div id="chat-messages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 0;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <textarea id="chat-input" placeholder="相談内容を入力してください..." style="flex:1;padding:10px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;resize:none;height:60px;line-height:1.6;outline:none;transition:border-color 0.15s;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+          <button class="btn btn-accent" onclick="sendChat()" id="btn-chat" style="height:60px;padding:0 16px;">送信</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Shift+Enterで改行 / Enterで送信</div>
+      </div>
+    </div>
+
+        <!-- ===== 設定 ===== -->
     <div class="panel" id="panel-settings">
       <div class="settings-card">
         <div class="settings-title">🤖 使用する AI を選択</div>
@@ -560,6 +582,7 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-cell')">キャンセル</button>
       <button class="btn" id="mc-del" onclick="deleteCell()" style="color:var(--danger);">削除</button>
+      <button class="btn" id="mc-copy" onclick="copyCell()">📋 複製</button>
       <button class="btn btn-primary" onclick="saveCell()">保存</button>
     </div>
   </div>
@@ -645,6 +668,7 @@ const PANEL_META = {
   test:{title:'テスト素案作成',sub:'指導と評価の一体化'},
   memo:{title:'メモパッド',sub:''},
   settings:{title:'設定',sub:''},
+  chat:{title:'先生相談室',sub:'授業・生徒指導・保護者対応なんでも'},
 };
 const PANEL_ACTIONS = {
   weekly: `<button class="btn btn-sm" onclick="exportWeek()">📤 PDF用印刷</button>`,
@@ -1414,6 +1438,134 @@ function clearData(){
 // ============================================================
 async function callClaude(apiKey, prompt, maxTokens=1000){
   return callAI(prompt, maxTokens);
+}
+
+// ============================================================
+// 先生相談室チャット
+// ============================================================
+let chatHistory = [];
+
+const CHAT_SYSTEM = `あなたは経験豊富な中学校教員のメンターです。相談者は現役の教員です。
+以下の方針で対応してください：
+- 共感的で温かい口調で接する
+- 具体的で実践的なアドバイスをする
+- 授業計画を求められた場合は、複数時間にわたる連続した授業案を出力する
+- 生徒指導・保護者対応の相談には、段階的な対処法を示す
+- 「先生」「教員」として相手をリスペクトした言い方をする
+- 回答は長すぎず、読みやすい形式にする
+- 必要に応じて箇条書きや見出しを使う`;
+
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  
+  const btn = document.getElementById('btn-chat');
+  btn.disabled = true;
+  input.value = '';
+  input.style.height = '60px';
+  
+  // ユーザーメッセージを表示
+  appendChatMsg('user', msg);
+  chatHistory.push({role:'user', content: msg});
+  
+  // ローディング表示
+  const loadId = 'load-' + Date.now();
+  appendChatMsg('assistant', '<span class="loading"><span class="spin"></span> 考え中...</span>', loadId);
+  
+  try {
+    // チャット専用のAPI呼び出し（システムプロンプト付き）
+    const messages = [{role:'user', content: CHAT_SYSTEM + '
+
+' + chatHistory.map(m => (m.role==='user'?'【先生】':'【あなた】') + m.content).join('
+
+')}];
+    const res = await callAI(CHAT_SYSTEM + '
+
+以下の会話の続きとして返答してください：
+
+' + chatHistory.map(m=>(m.role==='user'?'先生: ':'あなた: ')+m.content).join('
+'), 1200);
+    
+    // ローディングを実際の返答に差し替え
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.innerHTML = markdownToHtml(res);
+    chatHistory.push({role:'assistant', content: res});
+    
+    // 授業案が含まれる場合はワークスペース保存ボタンを表示
+    if(res.includes('##') || res.includes('時間目') || res.includes('展開')){
+      const loadEl2 = document.getElementById(loadId);
+      if(loadEl2){
+        const saveBtn = document.createElement('div');
+        saveBtn.style.marginTop = '10px';
+        saveBtn.innerHTML = `<button class="btn btn-sm btn-primary" onclick="saveChatPlan('${encodeURIComponent(res.substring(0,50))}', \`${encodeURIComponent(res)}\`)">💾 ワークスペースに保存</button>`;
+        loadEl2.appendChild(saveBtn);
+      }
+    }
+  } catch(e) {
+    const loadEl = document.getElementById(loadId);
+    if(loadEl) loadEl.innerHTML = `<span style="color:var(--danger);">エラー: ${e.message}</span>`;
+  }
+  
+  btn.disabled = false;
+  scrollChatBottom();
+}
+
+function appendChatMsg(role, html, id=''){
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.id = id;
+  div.style.cssText = role==='user' 
+    ? 'align-self:flex-end;background:var(--accent);color:#fff;padding:10px 14px;border-radius:12px 12px 3px 12px;max-width:80%;font-size:13px;line-height:1.6;'
+    : 'align-self:flex-start;background:var(--surface);border:1px solid var(--border);padding:12px 16px;border-radius:3px 12px 12px 12px;max-width:85%;font-size:13px;line-height:1.7;';
+  div.innerHTML = html;
+  container.appendChild(div);
+  scrollChatBottom();
+}
+
+function scrollChatBottom(){
+  const c = document.getElementById('chat-messages');
+  if(c) c.scrollTop = c.scrollHeight;
+}
+
+function saveChatPlan(titleEnc, contentEnc){
+  wsCounter++;
+  const title = decodeURIComponent(titleEnc);
+  const body = decodeURIComponent(contentEnc);
+  const id = Date.now();
+  wsFiles.push({id, name:`#${wsCounter} ${title}...`, subj:'moral', grade:'1', unit:title, content:body});
+  saveAll(); renderWs(); buildTestFileList();
+  toast('ワークスペースに保存しました');
+}
+
+// ============================================================
+// 週案簿 複製
+// ============================================================
+function copyCell(){
+  if(!editingCell) return;
+  const srcKey = `${currentWeekOffset}-${editingCell.di}-${editingCell.pi}`;
+  const srcData = weekData[srcKey];
+  if(!srcData){ toast('コピー元のデータがありません'); return; }
+  
+  // 複製先を選択するダイアログ
+  const days = ['月','火','水','木','金'];
+  const periods = ['1限','2限','3限','4限','5限','6限'];
+  const dayStr = days.map((d,i)=>`${i}:${d}`).join(', ');
+  const msg = `複製先を選んでください。
+曜日(0=月〜4=金): `;
+  const di = parseInt(prompt('複製先の曜日を選んでください
+0=月, 1=火, 2=水, 3=木, 4=金'));
+  if(isNaN(di) || di < 0 || di > 4){ toast('キャンセルしました'); return; }
+  const pi = parseInt(prompt('複製先の時限を選んでください
+0=1限, 1=2限, 2=3限, 3=4限, 4=5限, 5=6限'));
+  if(isNaN(pi) || pi < 0 || pi > 5){ toast('キャンセルしました'); return; }
+  
+  const destKey = `${currentWeekOffset}-${di}-${pi}`;
+  weekData[destKey] = {...srcData};
+  saveAll();
+  closeModal('modal-cell');
+  renderWeek();
+  toast(`${days[di]}曜${periods[pi]}に複製しました`);
 }
 
 // ============================================================
