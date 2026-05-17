@@ -1191,8 +1191,8 @@ const AI_CONFIG = {
   claude:{
     label:'Claude Sonnet', icon:'🟠', saveKey:'apiKey_claude',
     call:async(key,prompt,max=1000)=>{
-      const r=await fetch('https://api.anthropic.com/v1/messages',
-        {method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+      const r=await fetch('/api/claude',
+        {method:'POST',headers:{'Content-Type':'application/json'},
          body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:max,messages:[{role:'user',content:prompt}]})});
       if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
       const d=await r.json();
