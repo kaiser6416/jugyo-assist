@@ -312,32 +312,31 @@ body{font-family:'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
     <!-- ===== 指導案 DB ===== -->
     <div class="panel" id="panel-database">
       <div style="background:#fff8ed;border:1px solid #e8c86a;border-radius:8px;padding:10px 14px;font-size:11px;color:#7a5800;margin-bottom:12px;line-height:1.7;">
-        💡 キーワードを入力して検索すると、Web上の指導案・教育委員会資料・PDFを検索します。見つからない場合もあります。
+        💡 全国の教育委員会・文部科学省・NHK for Schoolなどの指導案を検索できます。
       </div>
-      <div class="search-row">
-        <input type="text" id="db-q" placeholder="例：一次方程式　光合成　鎌倉幕府..." />
-        <select id="db-subj">
-          <option value="">全教科</option>
-          <option value="math">数学</option>
-          <option value="jpn">国語</option>
-          <option value="sci">理科</option>
-          <option value="soc">社会</option>
-          <option value="eng">英語</option>
-        </select>
-        <select id="db-grade">
-          <option value="">全学年</option>
-          <option value="1">1年</option>
-          <option value="2">2年</option>
-          <option value="3">3年</option>
-        </select>
-        <button class="btn btn-primary" onclick="dbSearch()">🔍 Web検索</button>
-      </div>
-      <div class="db-count" id="db-count">キーワードを入力して検索してください</div>
-      <div id="db-results"></div>
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+
+      <!-- Google カスタム検索 -->
+      <script async src="https://cse.google.com/cse.js?cx=f40e807156c6e4edd"></script>
+      <div class="gcse-search"></div>
+
+      <!-- お気に入り -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
         <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;">⭐ お気に入り登録済み</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">見つけた指導案のURLとタイトルを登録しておくと、「これを参考に設計」ボタンで授業設計に活用できます。</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input type="text" id="fav-manual-title" placeholder="指導案のタイトル" style="flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;">
+          <input type="text" id="fav-manual-url" placeholder="https://..." style="flex:1;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;">
+          <button class="btn btn-accent btn-sm" onclick="manualAddFavorite()">⭐ 登録</button>
+        </div>
         <div id="db-favorites"></div>
       </div>
+
+      <!-- hidden: dbSearchはCSEが代替するが関数は残す -->
+      <input type="text" id="db-q" style="display:none;">
+      <select id="db-subj" style="display:none;"></select>
+      <select id="db-grade" style="display:none;"></select>
+      <div id="db-count" style="display:none;"></div>
+      <div id="db-results" style="display:none;"></div>
     </div>
 
     <!-- ===== 授業設計 ===== -->
