@@ -622,8 +622,7 @@ function loadAll(){
   wsFiles = load('wsFiles', []);
   wsCounter = load('wsCounter', 0);
   memos = load('memos', []);
-  const apiKey = load('apiKey', '');
-  if(apiKey) document.getElementById('api-key-input').value = apiKey;
+  dbFavorites = load('dbFavorites', []);
   renderWs();
   renderMemoList();
   buildTestFileList();
@@ -843,6 +842,122 @@ function useDbPlan(subj,grade,title){
 }
 
 // ============================================================
+// DB お気に入り管理
+// ============================================================
+let dbFavorites = [];
+
+function saveFavorites(){ save('dbFavorites', dbFavorites); }
+
+function renderFavorites(){
+  const container = document.getElementById('db-favorites');
+  if(!container) return;
+  if(!dbFavorites.length){
+    container.innerHTML = '<div style="font-size:11px;color:var(--text3);">まだお気に入りがありません</div>';
+    return;
+  }
+  container.innerHTML = dbFavorites.map((f,i) => `
+    <div class="plan-card" style="margin-bottom:6px;">
+      <div class="plan-card-top">
+        <div class="plan-card-title" style="font-size:12px;">${f.title}</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-sm" onclick="openPlan('${f.url}','${f.title} 指導案')">👁 閲覧</button>
+        <button class="btn btn-sm" onclick="useRefPlan('${f.title}','${f.url}')">✏️ 参考に設計</button>
+        <button class="btn btn-sm" style="color:var(--danger);" onclick="removeFavorite(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function addFavorite(title, url){
+  if(!dbFavorites) dbFavorites = [];
+  if(dbFavorites.find(f=>f.url===url)){ toast('すでにお気に入り登録済みです'); return; }
+  dbFavorites.push({title, url});
+  saveFavorites();
+  renderFavorites();
+  toast('お気に入りに追加しました');
+}
+
+function removeFavorite(idx){
+  dbFavorites.splice(idx,1);
+  saveFavorites();
+  renderFavorites();
+}
+
+function openPlan(url, keyword){
+  window.open(url, '_blank');
+}
+
+function useRefPlan(title, url){
+  document.getElementById('d-unit').value = title;
+  const refArea = document.getElementById('ref-plan-area');
+  const refTitle = document.getElementById('ref-plan-title');
+  const refUrl = document.getElementById('ref-plan-url');
+  if(refArea) refArea.style.display = '';
+  if(refTitle) refTitle.textContent = title;
+  if(refUrl){ refUrl.href = url; }
+  document.querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  const refTab = document.getElementById('mode-tab-ref');
+  if(refTab) refTab.classList.add('active');
+  currentDesignMode = 'ref';
+  nav('design');
+  toast('指導案を参考に設計モードで開きました');
+}
+
+async function dbSearch(){
+  const q = document.getElementById('db-q').value.trim();
+  if(!q){ toast('キーワードを入力してください'); return; }
+  const s = document.getElementById('db-subj').value;
+  const g = document.getElementById('db-grade').value;
+  const sLabel = s ? SUBJ[s].label : '';
+  const gLabel = g ? `中学${g}年` : '';
+
+  document.getElementById('db-count').innerHTML = '<span style="color:var(--text2);">🔍 検索中...</span>';
+  document.getElementById('db-results').innerHTML = '';
+
+  try {
+    const prompt = `あなたは教育の専門家です。「${q}」${sLabel?'（'+sLabel+'）':''}${gLabel}の中学校授業指導案を探しています。
+以下の形式でJSON配列のみを返してください（他の文字は不要）：
+[
+  {
+    "title": "指導案のタイトル（具体的に）",
+    "source": "出典・機関名（例：○○県教育委員会、文部科学省）",
+    "url": "https://www.mext.go.jp/ などの実在しそうなURL",
+    "summary": "指導案の概要（2文）",
+    "type": "pdf または web"
+  }
+]
+5件提案してください。`;
+
+    const res = await callAI(prompt, 800);
+    const clean = res.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const results = JSON.parse(clean);
+
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(q+' 指導案 中学校')}`;
+    document.getElementById('db-count').innerHTML = `「${q}」の検索結果 <strong>${results.length}件</strong>（AI提案）　<a href="${googleUrl}" target="_blank" style="font-size:11px;color:var(--accent);">🔍 Googleでも検索する</a>`;
+
+    document.getElementById('db-results').innerHTML = results.map(r => `
+      <div class="plan-card">
+        <div class="plan-card-top">
+          <div class="plan-card-title">${r.title||''}</div>
+          <div class="badges">
+            <span class="badge badge-gray">${r.source||''}</span>
+            ${r.type==='pdf'?'<span class="badge" style="background:#fee;color:#c00;">PDF</span>':''}
+          </div>
+        </div>
+        <div class="plan-card-body">${r.summary||''}</div>
+        <div class="card-actions">
+          <button class="btn btn-sm" onclick="openPlan('${(r.url||'').replace(/'/g,"\'")}','${(r.title||'').replace(/'/g,"\'")} 指導案')">👁 閲覧</button>
+          <button class="btn btn-sm" onclick="addFavorite('${(r.title||'').replace(/'/g,"\'")}','${(r.url||'').replace(/'/g,"\'")}')">⭐ お気に入り</button>
+          <button class="btn btn-sm btn-primary" onclick="useRefPlan('${(r.title||'').replace(/'/g,"\'")}','${(r.url||'').replace(/'/g,"\'")}')">✏️ これを参考に設計</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('db-count').textContent = '検索に失敗しました。再試行してください。';
+    console.error(e);
+  }
+}
+
+// ============================================================
 // DESIGN
 // ============================================================
 let currentDesignMode = 'manual';
@@ -864,7 +979,7 @@ async function generatePlan(){
   const jisuu=document.getElementById('d-jisuu').value;
   const unit=document.getElementById('d-unit').value.trim();
   const aim=document.getElementById('d-aim').value.trim();
-  const question=document.getElementById('d-question').value.trim();
+  const question='';
   const request=document.getElementById('d-request').value.trim();
   if(!unit){ toast('単元名を入力してください'); return; }
 
